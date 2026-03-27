@@ -1,0 +1,5009 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>анатомия усилия — цикл</title>
+    <script
+      type="module"
+      src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"
+    ></script>
+    <style>
+      :root {
+        --bg: #060a14;
+        --bg2: #0d1425;
+        --ink: rgba(241, 245, 255, 0.95);
+        --muted: rgba(205, 216, 240, 0.68);
+        --line: rgba(197, 209, 238, 0.11);
+        --glass: rgba(10, 16, 30, 0.48);
+        --glass-2: rgba(12, 18, 32, 0.7);
+        --a: #7fd5ff;
+        --b: #ff9fcf;
+        --c: #b99cff;
+        --gold: #ffd292;
+        --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+        --radius: 30px;
+        --font:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          "Segoe UI", sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+      }
+      body {
+        margin: 0;
+        font-family: var(--font);
+        color: var(--ink);
+        background:
+          radial-gradient(
+            circle at 10% 10%,
+            rgba(127, 213, 255, 0.12),
+            transparent 24%
+          ),
+          radial-gradient(
+            circle at 80% 10%,
+            rgba(185, 156, 255, 0.12),
+            transparent 28%
+          ),
+          radial-gradient(
+            circle at 50% 65%,
+            rgba(255, 161, 207, 0.08),
+            transparent 25%
+          ),
+          linear-gradient(180deg, #050811 0%, #0a1020 45%, #070b14 100%);
+        overflow-x: hidden;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      button {
+        font: inherit;
+      }
+      canvas#atmosphere {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        pointer-events: none;
+      }
+      .grain {
+        position: fixed;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+        opacity: 0.08;
+        background-image: radial-gradient(
+          circle,
+          rgba(255, 255, 255, 0.6) 0.7px,
+          transparent 0.8px
+        );
+        background-size: 10px 10px;
+        mix-blend-mode: soft-light;
+      }
+      .topnav {
+        position: fixed;
+        left: 50%;
+        top: 18px;
+        transform: translateX(-50%);
+        z-index: 10;
+        width: min(980px, calc(100% - 24px));
+        padding: 10px 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        border: 1px solid var(--line);
+        border-radius: 999px;
+        backdrop-filter: blur(16px);
+        background: rgba(8, 12, 24, 0.52);
+        box-shadow: 0 12px 36px rgba(0, 0, 0, 0.18);
+      }
+      .topnav .brand {
+        font-size: 12px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: rgba(224, 232, 252, 0.52);
+      }
+      .topnav .links {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      .topnav .links a {
+        padding: 8px 12px;
+        border-radius: 999px;
+        font-size: 13px;
+        color: rgba(229, 236, 255, 0.7);
+        transition:
+          background 0.25s ease,
+          color 0.25s ease,
+          transform 0.25s ease;
+      }
+      .topnav .links a:hover {
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--ink);
+        transform: translateY(-1px);
+      }
+
+      main {
+        position: relative;
+        z-index: 2;
+      }
+      .section {
+        padding: clamp(88px, 12vh, 132px) min(4vw, 34px);
+      }
+      .wrap {
+        width: min(1240px, 100%);
+        margin: 0 auto;
+      }
+      .eyebrow {
+        font-size: 12px;
+        letter-spacing: 0.24em;
+        text-transform: uppercase;
+        color: rgba(203, 214, 241, 0.5);
+      }
+      h1,
+      h2,
+      h3,
+      p {
+        margin: 0;
+      }
+      .hero {
+        min-height: 100vh;
+        display: grid;
+        align-items: center;
+      }
+      .hero-grid {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 26px;
+        align-items: end;
+      }
+      .hero h1 {
+        font-size: clamp(64px, 12vw, 164px);
+        line-height: 0.9;
+        letter-spacing: -0.06em;
+        text-transform: lowercase;
+        max-width: 8ch;
+      }
+      .lead {
+        margin-top: 18px;
+        width: min(720px, 100%);
+        font-size: clamp(18px, 1.8vw, 23px);
+        line-height: 1.68;
+        color: var(--muted);
+      }
+      .hero-cards {
+        display: grid;
+        gap: 14px;
+      }
+      .glass {
+        border: 1px solid var(--line);
+        background: var(--glass);
+        backdrop-filter: blur(18px);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+      }
+      .stat-card {
+        padding: 20px 22px;
+      }
+      .stat-card .label {
+        font-size: 11px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: rgba(204, 215, 241, 0.46);
+        margin-bottom: 8px;
+      }
+      .stat-card .value {
+        font-size: clamp(28px, 2.6vw, 44px);
+        letter-spacing: -0.05em;
+        line-height: 1;
+      }
+      .stat-card .sub {
+        margin-top: 10px;
+        color: rgba(214, 223, 248, 0.66);
+        font-size: 14px;
+        line-height: 1.55;
+      }
+      .section-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 20px;
+        align-items: end;
+        margin-bottom: 26px;
+      }
+      .section-title {
+        font-size: clamp(34px, 4vw, 64px);
+        line-height: 0.95;
+        letter-spacing: -0.05em;
+        max-width: 11ch;
+      }
+      .section-copy {
+        max-width: 50ch;
+        color: var(--muted);
+        font-size: 16px;
+        line-height: 1.72;
+      }
+      .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      .legend-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+        color: rgba(229, 235, 255, 0.76);
+        font-size: 13px;
+      }
+      .legend-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        box-shadow: 0 0 18px currentColor;
+      }
+      .calendar-shell {
+        display: grid;
+        grid-template-columns: 1.15fr 340px;
+        gap: 20px;
+      }
+
+      .calendar-toggle {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+      }
+      .calendar-view {
+        display: none;
+      }
+      .calendar-view.active {
+        display: block;
+      }
+      .art-calendar-shell {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 20px;
+      }
+      .p5-panel {
+        padding: 0;
+        overflow: hidden;
+        position: relative;
+        min-height: 520px;
+      }
+      #calendarSketchWrap {
+        min-height: 520px;
+        width: 100%;
+        position: relative;
+      }
+      #calendarSketchWrap canvas {
+        display: block;
+        border-radius: 28px;
+      }
+      .p5-note {
+        position: absolute;
+        left: 18px;
+        bottom: 18px;
+        max-width: 320px;
+        padding: 12px 14px;
+        border-radius: 18px;
+        background: rgba(7, 12, 24, 0.48);
+        border: 1px solid rgba(197, 209, 238, 0.08);
+        color: rgba(225, 233, 251, 0.7);
+        font-size: 13px;
+        line-height: 1.55;
+        backdrop-filter: blur(10px);
+      }
+      .real-calendar-shell {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 20px;
+      }
+      .months-stack {
+        display: grid;
+        gap: 18px;
+      }
+      .month-card {
+        padding: 18px 18px 14px;
+      }
+      .month-title {
+        font-size: 22px;
+        letter-spacing: -0.04em;
+        margin-bottom: 14px;
+      }
+      .week-head,
+      .month-grid {
+        display: grid;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .week-head div {
+        font-size: 12px;
+        color: rgba(203, 214, 241, 0.46);
+        text-transform: uppercase;
+        letter-spacing: 0.14em;
+        padding: 0 6px 6px;
+      }
+      .real-day {
+        min-height: 78px;
+        border-radius: 22px;
+        border: 1px solid rgba(197, 209, 238, 0.06);
+        background: rgba(255, 255, 255, 0.02);
+        padding: 8px;
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
+        transition:
+          transform 0.25s ease,
+          border-color 0.25s ease,
+          background 0.25s ease;
+      }
+      .real-day:hover {
+        transform: translateY(-2px);
+        border-color: rgba(197, 209, 238, 0.16);
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .real-day.inactive {
+        opacity: 0.38;
+      }
+      .real-day.selected {
+        border-color: rgba(255, 255, 255, 0.24);
+      }
+      .real-day .dnum {
+        font-size: 14px;
+        color: rgba(231, 237, 255, 0.84);
+        position: relative;
+        z-index: 2;
+      }
+      .real-day .dow {
+        font-size: 10px;
+        color: rgba(201, 212, 238, 0.38);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        position: absolute;
+        right: 10px;
+        top: 10px;
+      }
+      .real-day .fill {
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        bottom: 10px;
+        height: 34px;
+        border-radius: 16px;
+        opacity: 0.92;
+      }
+      .real-day[data-block="A"] .fill {
+        background: radial-gradient(
+          circle at 30% 50%,
+          rgba(127, 213, 255, 0.95),
+          rgba(127, 213, 255, 0.16) 60%,
+          transparent 75%
+        );
+      }
+      .real-day[data-block="B"] .fill {
+        background: radial-gradient(
+          circle at 30% 50%,
+          rgba(255, 159, 207, 0.95),
+          rgba(255, 159, 207, 0.16) 60%,
+          transparent 75%
+        );
+      }
+      .real-day[data-block="C"] .fill {
+        background: radial-gradient(
+          circle at 30% 50%,
+          rgba(185, 156, 255, 0.95),
+          rgba(185, 156, 255, 0.16) 60%,
+          transparent 75%
+        );
+      }
+      .real-day .ticks {
+        position: absolute;
+        left: 10px;
+        bottom: 12px;
+        display: flex;
+        gap: 3px;
+        z-index: 2;
+      }
+      .real-day .ticks i {
+        display: block;
+        width: 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.64);
+      }
+      .shift-chart-btn {
+        margin-top: 14px;
+        border: none;
+        padding: 10px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--ink);
+        border: 1px solid rgba(197, 209, 238, 0.12);
+      }
+      .chart-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 40;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 22px;
+        background: rgba(3, 7, 14, 0.66);
+        backdrop-filter: blur(12px);
+      }
+      .chart-modal.open {
+        display: flex;
+      }
+      .chart-panel {
+        width: min(960px, 100%);
+        padding: 22px;
+        position: relative;
+      }
+      .chart-close {
+        position: absolute;
+        right: 18px;
+        top: 18px;
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        border: 1px solid rgba(197, 209, 238, 0.12);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--ink);
+        cursor: pointer;
+      }
+      .chart-head {
+        display: grid;
+        gap: 6px;
+        margin-bottom: 16px;
+        padding-right: 56px;
+      }
+      .chart-sub {
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.6;
+        max-width: 70ch;
+      }
+      #shiftChartSvg {
+        width: 100%;
+        height: 360px;
+        display: block;
+      }
+      .chart-legend {
+        display: flex;
+        gap: 18px;
+        flex-wrap: wrap;
+        color: rgba(229, 236, 255, 0.72);
+        font-size: 13px;
+        margin-top: 10px;
+      }
+      .chart-legend span::before {
+        content: "";
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 8px;
+        vertical-align: middle;
+        background: currentColor;
+        box-shadow: 0 0 12px currentColor;
+      }
+      .pull-mode-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+      .pull-mode-btn {
+        border: none;
+        padding: 10px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(227, 235, 255, 0.72);
+        border: 1px solid rgba(197, 209, 238, 0.08);
+      }
+      .pull-mode-btn.active {
+        background: rgba(255, 255, 255, 0.12);
+        color: var(--ink);
+      }
+      .pull-art-stage {
+        position: relative;
+        min-height: 740px;
+        border-radius: 40px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background:
+          radial-gradient(
+            circle at 50% 18%,
+            rgba(127, 213, 255, 0.1),
+            transparent 24%
+          ),
+          radial-gradient(
+            circle at 50% 72%,
+            rgba(255, 159, 207, 0.08),
+            transparent 26%
+          ),
+          linear-gradient(180deg, rgba(14, 18, 32, 0.7), rgba(7, 11, 20, 0.92));
+      }
+      .pull-axis-glow {
+        position: absolute;
+        left: 50%;
+        top: 80px;
+        bottom: 80px;
+        width: 2px;
+        transform: translateX(-50%);
+        background: linear-gradient(
+          180deg,
+          rgba(127, 213, 255, 0.18),
+          rgba(255, 255, 255, 0.2),
+          rgba(255, 159, 207, 0.18)
+        );
+        box-shadow: 0 0 28px rgba(127, 213, 255, 0.16);
+      }
+      .pull-orbit {
+        position: absolute;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 440px;
+        height: 440px;
+        border-radius: 50%;
+        border: 1px solid rgba(197, 209, 238, 0.06);
+        filter: blur(0.2px);
+      }
+      .pull-rune {
+        position: absolute;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        padding: 16px 18px;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(197, 209, 238, 0.08);
+        backdrop-filter: blur(12px);
+        min-width: 220px;
+        text-align: center;
+      }
+      .pull-rune strong {
+        display: block;
+        font-size: 18px;
+        margin-bottom: 5px;
+      }
+      .pull-rune span {
+        display: block;
+        color: rgba(209, 220, 245, 0.62);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+      .pull-rune.active {
+        background: rgba(255, 255, 255, 0.09);
+        border-color: rgba(255, 255, 255, 0.24);
+        box-shadow: 0 0 28px rgba(127, 213, 255, 0.12);
+      }
+      .pull-rune::before {
+        content: "";
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        background: var(--a);
+        transform: translate(-50%, -50%);
+        opacity: 0.14;
+        filter: blur(8px);
+      }
+      .pull-constellation {
+        position: absolute;
+        inset: 0;
+      }
+      .pull-stage-note {
+        position: absolute;
+        left: 50%;
+        bottom: 28px;
+        transform: translateX(-50%);
+        width: min(82%, 560px);
+        text-align: center;
+        color: rgba(213, 223, 246, 0.58);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      @media (max-width: 980px) {
+        .calendar-shell,
+        .art-calendar-shell,
+        .real-calendar-shell,
+        .body-shell,
+        .pull-shell {
+          grid-template-columns: 1fr;
+        }
+        .body-stage,
+        .pull-art-stage {
+          min-height: 620px;
+        }
+        .month-grid {
+          gap: 6px;
+        }
+      }
+
+      .calendar-stage {
+        padding: 24px;
+        position: relative;
+        overflow: hidden;
+      }
+      .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(17, minmax(0, 1fr));
+        gap: 10px;
+        align-items: center;
+      }
+      .calendar-cell {
+        position: relative;
+        min-height: 56px;
+        border: none;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(197, 209, 238, 0.05);
+        color: inherit;
+        cursor: pointer;
+        overflow: hidden;
+        transition:
+          transform 0.25s ease,
+          border-color 0.25s ease,
+          background 0.25s ease;
+      }
+      .calendar-cell:hover {
+        transform: translateY(-2px);
+        border-color: rgba(197, 209, 238, 0.16);
+        background: rgba(255, 255, 255, 0.04);
+      }
+      .calendar-cell.empty {
+        opacity: 0.42;
+      }
+      .calendar-cell[data-block="A"] .calendar-orb {
+        color: var(--a);
+      }
+      .calendar-cell[data-block="B"] .calendar-orb {
+        color: var(--b);
+      }
+      .calendar-cell[data-block="C"] .calendar-orb {
+        color: var(--c);
+      }
+      .calendar-cell.active-day {
+        border-color: rgba(255, 255, 255, 0.22);
+      }
+      .calendar-orb {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%) scale(var(--scale, 0.42));
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: currentColor;
+        opacity: 0.8;
+        box-shadow:
+          0 0 0 6px color-mix(in srgb, currentColor 22%, transparent),
+          0 0 24px color-mix(in srgb, currentColor 58%, transparent);
+        filter: blur(0.2px);
+      }
+      .calendar-cell.empty .calendar-orb {
+        width: 6px;
+        height: 6px;
+        background: rgba(212, 223, 248, 0.24);
+        box-shadow: none;
+        opacity: 0.5;
+      }
+      .calendar-label {
+        position: absolute;
+        left: 8px;
+        bottom: 7px;
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: rgba(206, 217, 243, 0.36);
+      }
+      .calendar-detail {
+        padding: 22px;
+        display: grid;
+        gap: 16px;
+        align-content: start;
+      }
+      .detail-date {
+        font-size: 13px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: rgba(202, 214, 241, 0.46);
+      }
+      .detail-title {
+        font-size: clamp(26px, 2.6vw, 40px);
+        line-height: 0.98;
+        letter-spacing: -0.05em;
+      }
+      .detail-copy {
+        color: rgba(217, 225, 248, 0.72);
+        font-size: 15px;
+        line-height: 1.7;
+      }
+      .detail-list {
+        display: grid;
+        gap: 9px;
+      }
+      .detail-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 12px 14px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid rgba(197, 209, 238, 0.07);
+        font-size: 13px;
+        color: rgba(231, 237, 255, 0.8);
+      }
+      .body-shell {
+        display: grid;
+        grid-template-columns: 300px 1fr 320px;
+        gap: 20px;
+        align-items: stretch;
+      }
+      .side-panel {
+        padding: 22px;
+        display: grid;
+        gap: 18px;
+        align-content: start;
+      }
+      .filter-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .filter-pill {
+        border: none;
+        padding: 10px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(227, 235, 255, 0.72);
+        border: 1px solid rgba(197, 209, 238, 0.08);
+        transition:
+          transform 0.25s ease,
+          background 0.25s ease,
+          color 0.25s ease;
+      }
+      .filter-pill.active {
+        background: rgba(255, 255, 255, 0.12);
+        color: var(--ink);
+        transform: translateY(-1px);
+      }
+      .filter-pill:hover {
+        transform: translateY(-1px);
+      }
+      .mini-list {
+        display: grid;
+        gap: 10px;
+      }
+      .mini-item {
+        padding: 12px 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(197, 209, 238, 0.08);
+        background: rgba(255, 255, 255, 0.03);
+      }
+      .mini-item strong {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+      .mini-item span {
+        color: rgba(211, 221, 246, 0.62);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .body-stage {
+        position: relative;
+        min-height: 760px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border-radius: 40px;
+        background:
+          radial-gradient(
+            circle at 50% 18%,
+            rgba(143, 231, 255, 0.1),
+            transparent 20%
+          ),
+          radial-gradient(
+            circle at 50% 60%,
+            rgba(255, 170, 209, 0.08),
+            transparent 24%
+          ),
+          linear-gradient(180deg, rgba(13, 18, 34, 0.56), rgba(7, 11, 20, 0.86));
+        border: 1px solid var(--line);
+        box-shadow: var(--shadow);
+      }
+      .aura {
+        position: absolute;
+        inset: 6% 14%;
+        border-radius: 50%;
+        filter: blur(56px);
+        pointer-events: none;
+        background:
+          radial-gradient(
+            circle at 50% 26%,
+            rgba(143, 231, 255, 0.18),
+            transparent 18%
+          ),
+          radial-gradient(
+            circle at 50% 44%,
+            rgba(216, 225, 255, 0.12),
+            transparent 20%
+          ),
+          radial-gradient(
+            circle at 50% 64%,
+            rgba(255, 170, 209, 0.14),
+            transparent 24%
+          ),
+          radial-gradient(
+            circle at 50% 78%,
+            rgba(242, 227, 169, 0.12),
+            transparent 20%
+          );
+      }
+      .body-model-shell {
+        position: relative;
+        width: min(92%, 620px);
+        aspect-ratio: 0.74/1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .body-model-shell::before {
+        content: "";
+        position: absolute;
+        inset: 12% 20% 8%;
+        border-radius: 50%;
+        border: 1px solid rgba(197, 209, 238, 0.06);
+        box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+        pointer-events: none;
+      }
+      .body-3d-view {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        --poster-color: transparent;
+        background: transparent;
+      }
+      .body-3d-view::part(default-progress-mask),
+      .body-3d-view::part(default-progress-bar) {
+        display: none;
+      }
+      .body-3d-view::part(default-ar-button) {
+        display: none;
+      }
+      .body-3d-view::part(default-exit-webxr-ar-button) {
+        display: none;
+      }
+      .body-3d-view::part(default-skybox) {
+        filter: saturate(0.86) brightness(0.92);
+      }
+      .body-ghost-fallback {
+        position: absolute;
+        inset: 8% 18% 8%;
+        opacity: 0.06;
+        pointer-events: none;
+        filter: drop-shadow(0 14px 40px rgba(0, 0, 0, 0.26));
+      }
+      .body-ghost-fallback svg {
+        width: 100%;
+        height: 100%;
+      }
+      .body-ghost-fallback .ghost {
+        fill: rgba(248, 251, 255, 0.03);
+        stroke: rgba(225, 235, 255, 0.12);
+        stroke-width: 1.2;
+      }
+      .body-ghost-fallback .axis {
+        fill: none;
+        stroke: rgba(210, 221, 246, 0.08);
+        stroke-dasharray: 7 10;
+      }
+      .hotspot-hit {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.28);
+        background: rgba(8, 14, 28, 0.58);
+        backdrop-filter: blur(10px);
+        cursor: pointer;
+        padding: 0;
+        box-shadow:
+          0 0 0 1px rgba(255, 255, 255, 0.03) inset,
+          0 0 20px rgba(0, 0, 0, 0.22);
+        transition:
+          transform 0.25s ease,
+          box-shadow 0.25s ease,
+          border-color 0.25s ease,
+          background 0.25s ease,
+          opacity 0.3s ease;
+      }
+      .hotspot-hit::before {
+        content: "";
+        display: block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin: auto;
+        margin-top: 5px;
+        background: var(--color);
+        box-shadow: 0 0 16px var(--color);
+        opacity: 0.95;
+      }
+      .hotspot-hit:hover {
+        transform: scale(1.08);
+      }
+      .hotspot-hit.active {
+        background: rgba(255, 255, 255, 0.14);
+        border-color: rgba(255, 255, 255, 0.6);
+        box-shadow:
+          0 0 0 7px rgba(255, 255, 255, 0.04),
+          0 0 28px color-mix(in srgb, var(--color) 58%, transparent 42%);
+      }
+      .hotspot-hit.dim {
+        opacity: 0.42;
+      }
+      .hotspot-glow {
+        width: 88px;
+        height: 88px;
+        border: none;
+        border-radius: 50%;
+        pointer-events: none;
+        padding: 0;
+        background: radial-gradient(
+          circle at 50% 50%,
+          rgba(255, 255, 255, 0.92),
+          color-mix(in srgb, var(--color) 82%, white 18%) 28%,
+          transparent 72%
+        );
+        filter: blur(16px);
+        mix-blend-mode: screen;
+        opacity: 0.06;
+        transform: translateZ(0);
+        transition:
+          opacity 0.45s ease,
+          transform 0.45s ease,
+          filter 0.45s ease;
+      }
+      .hotspot-glow.active {
+        opacity: 0.64;
+        filter: blur(18px);
+      }
+      .hotspot-glow.support {
+        opacity: 0.26;
+      }
+      .hotspot-glow.dim {
+        opacity: 0.1;
+      }
+      .hotspot-glow.region-lats {
+        width: 132px;
+        height: 132px;
+      }
+      .hotspot-glow.region-upperBack {
+        width: 118px;
+        height: 118px;
+      }
+      .hotspot-glow.region-chest {
+        width: 112px;
+        height: 112px;
+      }
+      .hotspot-glow.region-biceps {
+        width: 92px;
+        height: 92px;
+      }
+      .hotspot-glow.region-triceps {
+        width: 92px;
+        height: 92px;
+      }
+      .hotspot-glow.region-glutes {
+        width: 120px;
+        height: 120px;
+      }
+      .hotspot-glow.region-quads {
+        width: 108px;
+        height: 108px;
+      }
+      .hotspot-glow.region-hamstrings {
+        width: 104px;
+        height: 104px;
+      }
+      .hotspot-glow.region-shoulders {
+        width: 100px;
+        height: 100px;
+      }
+      .hotspot-glow.region-arms {
+        width: 86px;
+        height: 86px;
+      }
+      .hotspot-ring {
+        width: 160px;
+        height: 160px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        pointer-events: none;
+        background: radial-gradient(
+          circle,
+          transparent 55%,
+          rgba(255, 255, 255, 0.03) 72%,
+          transparent 74%
+        );
+        filter: blur(0.2px);
+        opacity: 0.1;
+        transition:
+          opacity 0.35s ease,
+          transform 0.35s ease;
+      }
+      .hotspot-ring.active {
+        opacity: 0.34;
+        transform: scale(1.05);
+      }
+      .body-stage-toolbar {
+        position: absolute;
+        left: 24px;
+        right: 24px;
+        top: 22px;
+        z-index: 7;
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        align-items: center;
+        pointer-events: none;
+      }
+      .model-chip-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        pointer-events: auto;
+      }
+      .model-chip {
+        padding: 9px 12px;
+        border-radius: 999px;
+        border: 1px solid rgba(197, 209, 238, 0.09);
+        background: rgba(7, 12, 24, 0.46);
+        backdrop-filter: blur(10px);
+        font-size: 12px;
+        color: rgba(225, 233, 251, 0.76);
+      }
+      .model-chip strong {
+        color: var(--ink);
+      }
+      .body-caption {
+        position: absolute;
+        left: 50%;
+        bottom: 24px;
+        transform: translateX(-50%);
+        z-index: 7;
+        width: min(86%, 540px);
+        text-align: center;
+        color: rgba(213, 223, 246, 0.58);
+        font-size: 13px;
+        line-height: 1.6;
+        padding: 11px 14px;
+        border-radius: 20px;
+        border: 1px solid rgba(197, 209, 238, 0.08);
+        background: rgba(8, 12, 24, 0.34);
+        backdrop-filter: blur(10px);
+      }
+      .model-status {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 8;
+        width: min(78%, 360px);
+        padding: 12px 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 170, 209, 0.16);
+        background: rgba(18, 10, 20, 0.82);
+        color: rgba(255, 227, 236, 0.9);
+        font-size: 13px;
+        line-height: 1.5;
+        text-align: center;
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+      }
+      .model-export-note {
+        font-size: 12px;
+        color: rgba(205, 216, 240, 0.54);
+        line-height: 1.55;
+      }
+      .model-export-note code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+        color: rgba(233, 239, 255, 0.86);
+      }
+      .kpis {
+        display: grid;
+        gap: 10px;
+      }
+      .kpi-bar {
+        display: grid;
+        gap: 6px;
+      }
+      .kpi-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        font-size: 13px;
+        color: rgba(229, 236, 255, 0.78);
+      }
+      .kpi-track {
+        height: 8px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.05);
+        overflow: hidden;
+        border: 1px solid rgba(197, 209, 238, 0.07);
+      }
+      .kpi-fill {
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(
+          90deg,
+          rgba(127, 213, 255, 0.92),
+          rgba(255, 161, 207, 0.86)
+        );
+        box-shadow: 0 0 22px rgba(127, 213, 255, 0.22);
+      }
+      .pull-shell {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 320px;
+        gap: 20px;
+        align-items: stretch;
+      }
+      .pull-phase-panel {
+        display: none;
+      }
+      .phase-list {
+        display: grid;
+        gap: 10px;
+      }
+      .phase-card {
+        position: relative;
+        padding: 14px 16px 14px 52px;
+        border-radius: 22px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.04);
+        cursor: pointer;
+        transition:
+          transform 0.25s ease,
+          background 0.25s ease,
+          border-color 0.25s ease;
+      }
+      .phase-card:hover {
+        transform: translateY(-2px);
+      }
+      .phase-card.active {
+        background: rgba(255, 255, 255, 0.09);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+      .phase-number {
+        position: absolute;
+        left: 14px;
+        top: 14px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+        border: 1px solid rgba(197, 209, 238, 0.14);
+        background: rgba(255, 255, 255, 0.05);
+        color: rgba(232, 238, 255, 0.86);
+      }
+      .phase-card strong {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 15px;
+      }
+      .phase-card span {
+        color: rgba(207, 218, 244, 0.62);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .pull-stage {
+        position: relative;
+        min-height: 740px;
+        border-radius: 40px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        background:
+          radial-gradient(
+            circle at 50% 12%,
+            rgba(255, 255, 255, 0.08),
+            transparent 20%
+          ),
+          radial-gradient(
+            circle at 50% 38%,
+            rgba(127, 213, 255, 0.12),
+            transparent 24%
+          ),
+          radial-gradient(
+            circle at 50% 72%,
+            rgba(255, 161, 207, 0.12),
+            transparent 28%
+          ),
+          linear-gradient(180deg, rgba(13, 18, 34, 0.6), rgba(7, 10, 20, 0.84));
+        box-shadow: var(--shadow);
+      }
+      .pull-axis {
+        position: absolute;
+        left: 50%;
+        top: 74px;
+        bottom: 76px;
+        width: 2px;
+        transform: translateX(-50%);
+        background: linear-gradient(
+          180deg,
+          rgba(255, 255, 255, 0.05),
+          rgba(127, 213, 255, 0.62),
+          rgba(255, 161, 207, 0.72)
+        );
+        box-shadow: 0 0 28px rgba(127, 213, 255, 0.24);
+      }
+      .pull-marker {
+        position: absolute;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.08);
+        color: var(--ink);
+        cursor: pointer;
+        box-shadow:
+          0 0 0 0 rgba(255, 255, 255, 0.05),
+          0 0 26px rgba(127, 213, 255, 0.18);
+        transition:
+          transform 0.25s ease,
+          background 0.25s ease;
+      }
+      .pull-marker.active {
+        transform: translate(-50%, -50%) scale(1.14);
+        background: rgba(255, 255, 255, 0.16);
+      }
+      .pull-marker::after {
+        content: attr(data-stage);
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        font-size: 12px;
+      }
+      .pull-label {
+        position: absolute;
+        left: 50%;
+        transform: translateX(calc(-50% + 52px));
+        width: min(280px, 34vw);
+        padding: 12px 14px;
+        border-radius: 20px;
+        border: 1px solid rgba(197, 209, 238, 0.08);
+        background: rgba(9, 14, 26, 0.56);
+        backdrop-filter: blur(12px);
+      }
+      .pull-label strong {
+        display: block;
+        margin-bottom: 4px;
+        font-size: 14px;
+      }
+      .pull-label span {
+        display: block;
+        color: rgba(210, 221, 246, 0.62);
+        font-size: 13px;
+        line-height: 1.5;
+      }
+      .pull-detail {
+        padding: 22px;
+        display: grid;
+        gap: 16px;
+        align-content: start;
+      }
+      .pull-metric {
+        font-size: clamp(36px, 4vw, 58px);
+        line-height: 0.9;
+        letter-spacing: -0.05em;
+      }
+      .shifts-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+      }
+      .shift-card {
+        padding: 22px;
+        position: relative;
+        overflow: hidden;
+      }
+      .shift-card::before {
+        content: "";
+        position: absolute;
+        inset: auto -18% -22% auto;
+        width: 180px;
+        height: 180px;
+        border-radius: 50%;
+        background: radial-gradient(
+          circle,
+          color-mix(in srgb, var(--accent) 34%, transparent),
+          transparent 70%
+        );
+        filter: blur(18px);
+      }
+      .shift-label {
+        font-size: 13px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: rgba(205, 216, 241, 0.48);
+      }
+      .shift-main {
+        margin-top: 18px;
+        display: grid;
+        gap: 16px;
+      }
+      .shift-numbers {
+        display: flex;
+        justify-content: space-between;
+        align-items: end;
+        gap: 12px;
+      }
+      .shift-numbers strong {
+        font-size: clamp(34px, 3vw, 48px);
+        line-height: 0.95;
+        letter-spacing: -0.05em;
+      }
+      .shift-delta {
+        padding: 8px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(197, 209, 238, 0.1);
+        font-size: 13px;
+        color: rgba(231, 237, 255, 0.86);
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .shift-line {
+        position: relative;
+        height: 18px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(197, 209, 238, 0.07);
+      }
+      .shift-line::before {
+        content: "";
+        position: absolute;
+        left: 10px;
+        right: 10px;
+        top: 50%;
+        height: 2px;
+        transform: translateY(-50%);
+        background: linear-gradient(
+          90deg,
+          color-mix(in srgb, var(--accent) 24%, transparent),
+          color-mix(in srgb, var(--accent) 84%, white 16%)
+        );
+      }
+      .shift-dot {
+        position: absolute;
+        top: 50%;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        transform: translate(-50%, -50%);
+        background: var(--accent);
+        box-shadow: 0 0 20px
+          color-mix(in srgb, var(--accent) 78%, transparent 22%);
+      }
+      .shift-sub {
+        color: rgba(211, 221, 246, 0.68);
+        font-size: 14px;
+        line-height: 1.62;
+      }
+      .archive-head {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        align-items: end;
+        margin-bottom: 20px;
+      }
+      .archive-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+      }
+      .archive-card {
+        padding: 18px;
+        display: grid;
+        gap: 12px;
+        align-content: start;
+        transition:
+          transform 0.25s ease,
+          border-color 0.25s ease,
+          background 0.25s ease;
+      }
+      .archive-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.16);
+      }
+      .archive-top {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      .archive-date {
+        font-size: 12px;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: rgba(203, 214, 241, 0.46);
+      }
+      .archive-title {
+        font-size: 26px;
+        line-height: 1;
+        letter-spacing: -0.04em;
+      }
+      .archive-tag {
+        padding: 8px 11px;
+        border-radius: 999px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        border: 1px solid rgba(197, 209, 238, 0.1);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--ink);
+      }
+      .archive-tag.A {
+        background: color-mix(in srgb, var(--a) 22%, rgba(255, 255, 255, 0.05));
+      }
+      .archive-tag.B {
+        background: color-mix(in srgb, var(--b) 22%, rgba(255, 255, 255, 0.05));
+      }
+      .archive-tag.C {
+        background: color-mix(in srgb, var(--c) 22%, rgba(255, 255, 255, 0.05));
+      }
+      .archive-regions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+      }
+      .archive-regions span {
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(197, 209, 238, 0.08);
+        font-size: 12px;
+        color: rgba(226, 233, 255, 0.82);
+      }
+      .archive-exercises {
+        display: grid;
+        gap: 8px;
+      }
+      .archive-exercise {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        font-size: 13px;
+        color: rgba(228, 235, 255, 0.82);
+      }
+      .archive-exercise em {
+        font-style: normal;
+        color: rgba(195, 208, 240, 0.5);
+        font-size: 12px;
+      }
+      .footer-note {
+        margin-top: 18px;
+        color: rgba(191, 204, 236, 0.48);
+        font-size: 13px;
+        line-height: 1.65;
+      }
+      .reveal {
+        opacity: 0;
+        transform: translateY(22px);
+        transition:
+          opacity 0.7s ease,
+          transform 0.7s ease;
+      }
+      .reveal.visible {
+        opacity: 1;
+        transform: none;
+      }
+
+      @media (max-width: 1080px) {
+        .hero-grid,
+        .calendar-shell,
+        .body-shell,
+        .pull-shell {
+          grid-template-columns: 1fr;
+        }
+        .shifts-grid,
+        .archive-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+        .body-stage,
+        .pull-stage {
+          min-height: 640px;
+        }
+      }
+      @media (max-width: 760px) {
+        .topnav {
+          width: calc(100% - 18px);
+          padding: 10px;
+        }
+        .topnav .brand {
+          display: none;
+        }
+        .section {
+          padding-inline: 16px;
+        }
+        .section-head,
+        .archive-head {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .calendar-grid {
+          grid-template-columns: repeat(7, minmax(0, 1fr));
+        }
+        .shifts-grid,
+        .archive-grid {
+          grid-template-columns: 1fr;
+        }
+        .body-stage {
+          min-height: 560px;
+        }
+        .pull-stage {
+          min-height: 620px;
+        }
+      }
+
+      /* быстрый режим: оставляем только атомизацию и только арт-объект подтягиваний */
+      #calendarViewToggle .filter-pill[data-view="real"],
+      #calendarRealView,
+      #pullModeRow .pull-mode-btn[data-mode="path"],
+      #pullPathStage {
+        display: none !important;
+      }
+
+      #pullArtifactStage {
+        display: block !important;
+        min-height: 860px;
+      }
+
+      #calendarSketchWrap {
+        cursor: grab;
+      }
+      #calendarSketchWrap.dragging {
+        cursor: grabbing;
+      }
+
+      .calendar-tooltip {
+        position: absolute;
+        z-index: 6;
+        min-width: 220px;
+        max-width: 280px;
+        padding: 12px 14px;
+        border-radius: 18px;
+        border: 1px solid rgba(197, 209, 238, 0.12);
+        background: rgba(8, 12, 24, 0.86);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28);
+        pointer-events: none;
+        color: rgba(241, 245, 255, 0.95);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .calendar-tooltip .tt-date {
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: rgba(204, 215, 241, 0.48);
+        margin-bottom: 6px;
+      }
+
+      .calendar-tooltip .tt-title {
+        font-size: 18px;
+        line-height: 1.05;
+        letter-spacing: -0.03em;
+        margin-bottom: 6px;
+      }
+
+      .calendar-tooltip .tt-copy {
+        color: rgba(214, 223, 248, 0.72);
+      }
+
+      .legend-chip.active {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(255, 255, 255, 0.22);
+        color: var(--ink);
+        transform: translateY(-1px);
+      }
+
+      .pull-art-stage {
+        background:
+          radial-gradient(
+            circle at 50% 14%,
+            rgba(255, 255, 255, 0.12),
+            transparent 16%
+          ),
+          radial-gradient(
+            circle at 50% 36%,
+            rgba(127, 213, 255, 0.14),
+            transparent 24%
+          ),
+          radial-gradient(
+            circle at 50% 78%,
+            rgba(255, 161, 207, 0.14),
+            transparent 28%
+          ),
+          linear-gradient(180deg, rgba(13, 18, 34, 0.68), rgba(7, 10, 20, 0.92));
+      }
+
+      .pull-orbit {
+        border-color: rgba(127, 213, 255, 0.1);
+        box-shadow: 0 0 28px rgba(127, 213, 255, 0.06) inset;
+      }
+
+      .pull-rune {
+        appearance: none;
+        -webkit-appearance: none;
+        color: rgba(245, 248, 255, 0.96) !important;
+        min-width: 280px;
+        max-width: 340px;
+        box-shadow:
+          0 16px 42px rgba(0, 0, 0, 0.3),
+          0 0 24px rgba(127, 213, 255, 0.08);
+      }
+
+      .pull-rune strong {
+        color: rgba(245, 248, 255, 0.96) !important;
+        font-size: 16px;
+      }
+
+      .pull-rune span {
+        color: rgba(221, 229, 249, 0.76) !important;
+      }
+
+      .pull-rune.active {
+        background: rgba(255, 255, 255, 0.12);
+        border-color: rgba(127, 213, 255, 0.42);
+        box-shadow:
+          0 0 0 1px rgba(127, 213, 255, 0.18) inset,
+          0 0 42px rgba(127, 213, 255, 0.12);
+      }
+
+      .pull-stage-note {
+        color: rgba(225, 233, 251, 0.72);
+      }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.3/p5.min.js"></script>
+  </head>
+  <body>
+    <canvas id="atmosphere"></canvas>
+    <div class="grain"></div>
+
+    <nav class="topnav">
+      <div class="brand">анатомия усилия · дата-арт</div>
+      <div class="links">
+        <a href="#calendar">календарь</a>
+        <a href="#body">тело</a>
+        <a href="#pullup">подтягивания</a>
+        <a href="#shifts">прогресс в весах</a>
+        <a href="#archive">архив</a>
+      </div>
+    </nav>
+
+    <main>
+      <section class="section hero">
+        <div class="wrap hero-grid">
+          <div class="reveal">
+            <div class="eyebrow">
+              тренировочный цикл · 2026-02-04 → 2026-03-26
+            </div>
+            <h1>52 дня<br />качка</h1>
+            <p class="lead">
+              интерактивная визуализация одного тренировочного цикла. в основе
+              проекта — реальные логи из Strong: даты, упражнения, веса,
+              количество подходов и изменения поддержки в подтягиваниях.
+              страница устроена как карта процесса. <br />
+              <br />
+              этот проект - мой способ посмотреть на тренировку как на процесс,
+              который можно развернуть в пространстве и времени.
+            </p>
+          </div>
+          <div class="hero-cards reveal">
+            <article class="glass stat-card">
+              <div class="label">ритм</div>
+              <div class="value">~2,0 дня</div>
+              <div class="sub">
+                между сессиями. цикл строится не на рекорде, а на повторяемой
+                дисциплине.
+              </div>
+            </article>
+            <article class="glass stat-card">
+              <div class="label">архитектура</div>
+              <div class="value">a / b / c</div>
+              <div class="sub">
+                три режима сборки тела: тяга, опора, плотность верха. каждый
+                возвращается снова и снова.
+              </div>
+            </article>
+            <article class="glass stat-card">
+              <div class="label">доминирующие зоны</div>
+              <div class="sub">
+                широчайшие · бицепс · верх спины · ягодицы · трицепс
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="calendar">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <div>
+              <div class="eyebrow">1. календарь цикла</div>
+              <h2 class="section-title">не учет, а ритм появления тела</h2>
+            </div>
+          </div>
+
+          <div class="legend reveal">
+            <div class="legend-chip">
+              <span class="legend-dot" style="color: var(--a)"></span>A — тяга /
+              спина
+            </div>
+            <div class="legend-chip">
+              <span class="legend-dot" style="color: var(--b)"></span>B — низ
+              тела / опора
+            </div>
+            <div class="legend-chip">
+              <span class="legend-dot" style="color: var(--c)"></span>C — плечи
+              / руки
+            </div>
+            <div class="legend-chip">
+              <span class="legend-dot" style="color: var(--gold)"></span
+              >свечение = плотность дня
+            </div>
+          </div>
+
+          <div class="calendar-toggle reveal" id="calendarViewToggle">
+            <button class="filter-pill" data-view="real">
+              2. реальный календарный вид
+            </button>
+          </div>
+
+          <div class="calendar-view active reveal" id="calendarArtView">
+            <div class="art-calendar-shell">
+              <div class="glass p5-panel">
+                <div id="calendarSketchWrap"></div>
+              </div>
+              <aside class="glass calendar-detail">
+                <div class="detail-date">режим чтения</div>
+                <div class="detail-title">атомизация цикла</div>
+                <div class="detail-copy">
+                  тренировочные дни представлены как созвездие нагрузки. пустые
+                  интервалы фиксируют временные промежутки между тренировками,
+                  дают фазу исчезновения и следующего входа.
+                </div>
+                <div class="detail-list">
+                  <div class="detail-item">
+                    <span>дней тренировочного цикла:</span><strong>51</strong>
+                  </div>
+                  <div class="detail-item">
+                    <span>проведено силовых тренировок:</span
+                    ><strong>26</strong>
+                  </div>
+                  <div class="detail-item">
+                    <span>тренеровочный мотив</span
+                    ><strong>непрерывность через паузы</strong>
+                  </div>
+                </div>
+              </aside>
+            </div>
+          </div>
+
+          <div class="calendar-view reveal" id="calendarRealView">
+            <div class="real-calendar-shell">
+              <div class="months-stack" id="realCalendarMonths"></div>
+              <aside class="glass calendar-detail">
+                <div class="detail-date" id="calendarDetailDate">
+                  выбранный день
+                </div>
+                <div class="detail-title" id="calendarDetailTitle">
+                  календарный след
+                </div>
+                <div class="detail-copy" id="calendarDetailCopy">
+                  здесь видно уже не абстрактный ритм, а буквальное течение
+                  времени: день недели, интервалы и то, как A/B/C расставлялись
+                  внутри февраля и марта.
+                </div>
+                <div class="detail-list" id="calendarDetailList"></div>
+              </aside>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="body">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <div>
+              <div class="eyebrow">2. тело как карта нагрузки</div>
+              <h2 class="section-title">память цикла внутри силуэта</h2>
+            </div>
+          </div>
+
+          <div class="body-shell">
+            <aside class="glass side-panel reveal">
+              <div>
+                <div class="eyebrow">режим просмотра</div>
+                <div class="filter-row" id="bodyFilters">
+                  <button class="filter-pill active" data-mode="overall">
+                    весь цикл
+                  </button>
+                  <button class="filter-pill" data-mode="A">A</button>
+                  <button class="filter-pill" data-mode="B">B</button>
+                  <button class="filter-pill" data-mode="C">C</button>
+                </div>
+              </div>
+              <div>
+                <div class="eyebrow">три режима цикла</div>
+                <div class="mini-list" id="blockMiniList"></div>
+              </div>
+            </aside>
+
+            <div class="body-stage reveal">
+              <div class="aura"></div>
+              <div class="body-stage-toolbar">
+                <div class="model-chip-row">
+                  <div class="model-chip">
+                    <strong>режим:</strong> свободное 3D-вращение
+                  </div>
+                </div>
+              </div>
+              <div class="body-model-shell" id="bodyModelShell">
+                <model-viewer
+                  id="bodyModelViewer"
+                  class="body-3d-view"
+                  src="assets/body.glb"
+                  camera-controls
+                  interpolation-decay="120"
+                  shadow-intensity="0"
+                  environment-image="neutral"
+                  exposure="1.05"
+                  orientation="0deg 0deg 90deg"
+                  camera-orbit="180deg 92deg 128%"
+                  min-camera-orbit="auto 45deg auto"
+                  max-camera-orbit="auto 135deg auto"
+                  min-field-of-view="22deg"
+                  max-field-of-view="42deg"
+                  field-of-view="28deg"
+                  interaction-prompt="none"
+                  disable-pan
+                >
+                </model-viewer>
+                <div id="modelStatus" class="model-status" hidden></div>
+                <div class="body-ghost-fallback" aria-hidden="true">
+                  <svg viewBox="0 0 700 1000">
+                    <path
+                      class="ghost"
+                      d="M350 90 C402 90,438 126,438 174 C438 212,424 236,404 252 C432 272,456 312,466 362 C477 414,476 484,460 560 C448 618,434 678,420 746 C406 812,394 872,386 926 L314 926 C306 872,294 812,280 746 C266 678,252 618,240 560 C224 484,223 414,234 362 C244 312,268 272,296 252 C276 236,262 212,262 174 C262 126,298 90,350 90 Z"
+                    />
+                    <path
+                      class="ghost"
+                      d="M296 252 C258 272,220 314,190 370 C164 418,148 466,144 504 C140 538,150 560,166 570 C190 585,214 566,228 536 C242 504,254 458,262 408"
+                    />
+                    <path
+                      class="ghost"
+                      d="M404 252 C442 272,480 314,510 370 C536 418,552 466,556 504 C560 538,550 560,534 570 C510 585,486 566,472 536 C458 504,446 458,438 408"
+                    />
+                    <path class="axis" d="M350 90 L350 926" />
+                  </svg>
+                </div>
+                <div id="hotspotMount" aria-hidden="true"></div>
+              </div>
+              <div class="body-caption" id="bodyCaption"></div>
+            </div>
+
+            <aside class="glass side-panel reveal">
+              <div>
+                <div class="eyebrow">выбранная зона</div>
+                <h3 class="detail-title" id="regionTitle">широчайшие</h3>
+                <div class="detail-copy" id="regionCopy"></div>
+              </div>
+              <div>
+                <div class="eyebrow">какие упражнения формируют эту зону</div>
+                <div class="mini-list" id="regionExercises"></div>
+              </div>
+              <div>
+                <div class="eyebrow">распределение по режимам</div>
+                <div class="kpis" id="regionKpis"></div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="pullup">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <div>
+              <div class="eyebrow">3. путь к подтягиваниям</div>
+              <h2 class="section-title">ось подъема, а не список упражнений</h2>
+            </div>
+          </div>
+
+          <div class="pull-mode-row reveal" id="pullModeRow">
+            <button class="pull-mode-btn active" data-mode="path">
+              1. общий путь
+            </button>
+          </div>
+
+          <div class="pull-shell">
+            <aside class="glass side-panel reveal pull-phase-panel">
+              <div class="eyebrow">фазы</div>
+              <div class="phase-list" id="phaseList"></div>
+            </aside>
+
+            <div class="reveal">
+              <div class="pull-stage" id="pullPathStage">
+                <div class="pull-axis"></div>
+              </div>
+              <div
+                class="pull-art-stage"
+                id="pullArtifactStage"
+                style="display: none"
+              >
+                <div class="pull-axis-glow"></div>
+                <div class="pull-constellation" id="pullConstellation"></div>
+              </div>
+            </div>
+
+            <aside class="glass pull-detail reveal">
+              <div class="detail-date" id="pullDetailDate">фаза</div>
+              <div class="pull-metric" id="pullDetailMetric">35 кг</div>
+              <div class="detail-title" id="pullDetailTitle">внешняя опора</div>
+              <div class="detail-copy" id="pullDetailCopy"></div>
+              <div class="detail-list">
+                <div class="detail-item">
+                  <span>линия проекта</span
+                  ><strong>от помощи к автономии</strong>
+                </div>
+                <div class="detail-item">
+                  <span>формы движения</span
+                  ><strong>гравитрон + резинки + негативы + изометрия</strong>
+                </div>
+                <div class="detail-item">
+                  <span>принцип сборки</span
+                  ><strong>объединение по функции, не по названию хвата</strong>
+                </div>
+              </div>
+            </aside>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="shifts">
+        <div class="wrap">
+          <div class="section-head reveal">
+            <div>
+              <div class="eyebrow">4. анатомия сдвигов</div>
+              <h2 class="section-title">мои лучшие прогрессии</h2>
+            </div>
+          </div>
+          <div class="shifts-grid" id="shiftsGrid"></div>
+        </div>
+      </section>
+
+      <section class="section" id="archive">
+        <div class="wrap">
+          <div class="archive-head reveal">
+            <div>
+              <div class="eyebrow">5. тренировочный архив</div>
+              <h2 class="section-title">частные дни после общей картины</h2>
+            </div>
+            <div>
+              <div class="filter-row" id="archiveFilters">
+                <button class="filter-pill active" data-filter="all">
+                  все
+                </button>
+                <button class="filter-pill" data-filter="A">A</button>
+                <button class="filter-pill" data-filter="B">B</button>
+                <button class="filter-pill" data-filter="C">C</button>
+              </div>
+              <div class="footer-note">
+                только тренировочный лог на уровне отдельных сессий.
+              </div>
+            </div>
+          </div>
+          <div class="archive-grid" id="archiveGrid"></div>
+        </div>
+      </section>
+
+      <div class="chart-modal" id="chartModal">
+        <div class="glass chart-panel">
+          <button class="chart-close" id="chartClose">×</button>
+          <div class="chart-head">
+            <div class="detail-date" id="chartEyebrow">метрика</div>
+            <div class="detail-title" id="chartTitle">линия упражнения</div>
+            <div class="chart-sub" id="chartSub">
+              по оси X — даты цикла, по оси Y — одна выбранная метрика. здесь
+              нет всех возможных данных сразу: только один показатель, чтобы
+              увидеть форму изменения.
+            </div>
+          </div>
+          <svg
+            id="shiftChartSvg"
+            viewBox="0 0 900 360"
+            preserveAspectRatio="none"
+          ></svg>
+        </div>
+      </div>
+
+      <div style="display: none">
+        <div id="calendarGrid"></div>
+        <div id="pullStage"></div>
+      </div>
+    </main>
+
+    <script>
+      const DATA = {
+        calendar: [
+          {
+            date: "2026-02-04",
+            active: true,
+            block: "C",
+            load: 1572.0,
+            loadNorm: 0.254,
+            duration: 58.0,
+            name: "C-DAY🦾",
+          },
+          {
+            date: "2026-02-05",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-02-06",
+            active: true,
+            block: "B",
+            load: 6184.0,
+            loadNorm: 1.0,
+            duration: 57.0,
+            name: "B-DAY 1/2🍑",
+          },
+          {
+            date: "2026-02-07",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-02-08",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-02-09",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-02-10",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-02-11",
+            active: true,
+            block: "A",
+            load: 3590.0,
+            loadNorm: 0.581,
+            duration: 53.0,
+            name: "A-DAY 💪",
+          },
+          {
+            date: "2026-02-12",
+            active: true,
+            block: "C",
+            load: 2214.0,
+            loadNorm: 0.358,
+            duration: 55.0,
+            name: "C-DAY🦾",
+          },
+          {
+            date: "2026-02-13",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-02-14",
+            active: true,
+            block: "B",
+            load: 3454.0,
+            loadNorm: 0.559,
+            duration: 38.0,
+            name: "B-DAY 2/2 🍑",
+          },
+          {
+            date: "2026-02-15",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-02-16",
+            active: true,
+            block: "A",
+            load: 2814.0,
+            loadNorm: 0.455,
+            duration: 46.0,
+            name: "A-DAY 💪",
+          },
+          {
+            date: "2026-02-17",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-02-18",
+            active: true,
+            block: "C",
+            load: 2746.5,
+            loadNorm: 0.444,
+            duration: 68.0,
+            name: "C-DAY🦾",
+          },
+          {
+            date: "2026-02-19",
+            active: true,
+            block: "B",
+            load: 5714.0,
+            loadNorm: 0.924,
+            duration: 75.0,
+            name: "B-DAY 1/2🍑",
+          },
+          {
+            date: "2026-02-20",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-02-21",
+            active: true,
+            block: "A",
+            load: 3248.0,
+            loadNorm: 0.525,
+            duration: 65.0,
+            name: "A-DAY 💪",
+          },
+          {
+            date: "2026-02-22",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-02-23",
+            active: true,
+            block: "C",
+            load: 2167.0,
+            loadNorm: 0.35,
+            duration: 63.0,
+            name: "C-DAY🦾",
+          },
+          {
+            date: "2026-02-24",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-02-25",
+            active: true,
+            block: "B",
+            load: 4257.5,
+            loadNorm: 0.688,
+            duration: 60.0,
+            name: "B-DAY 2/2 🦵",
+          },
+          {
+            date: "2026-02-26",
+            active: true,
+            block: "A",
+            load: 4659.0,
+            loadNorm: 0.753,
+            duration: 66.0,
+            name: "A-DAY 💪",
+          },
+          {
+            date: "2026-02-27",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-02-28",
+            active: true,
+            block: "C",
+            load: 3541.0,
+            loadNorm: 0.573,
+            duration: 70.0,
+            name: "C-DAY🦾",
+          },
+          {
+            date: "2026-03-01",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-03-02",
+            active: true,
+            block: "A",
+            load: 3060.0,
+            loadNorm: 0.495,
+            duration: 53.0,
+            name: "A-DAY 💪",
+          },
+          {
+            date: "2026-03-03",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-03-04",
+            active: true,
+            block: "B",
+            load: 4633.5,
+            loadNorm: 0.749,
+            duration: 72.0,
+            name: "B-DAY 2/2 🦵",
+          },
+          {
+            date: "2026-03-05",
+            active: true,
+            block: "C",
+            load: 2645.0,
+            loadNorm: 0.428,
+            duration: 82.0,
+            name: "C-DAY🦾",
+          },
+          {
+            date: "2026-03-06",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-03-07",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-03-08",
+            active: true,
+            block: "A",
+            load: 4547.0,
+            loadNorm: 0.735,
+            duration: 81.0,
+            name: "A-DAY 💪",
+          },
+          {
+            date: "2026-03-09",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-03-10",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-03-11",
+            active: true,
+            block: "B",
+            load: 3678.0,
+            loadNorm: 0.595,
+            duration: 46.0,
+            name: "B-DAY 1/2🍑",
+          },
+          {
+            date: "2026-03-12",
+            active: true,
+            block: "C",
+            load: 1728.0,
+            loadNorm: 0.279,
+            duration: 65.0,
+            name: "C-DAY🦾",
+          },
+          {
+            date: "2026-03-13",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-03-14",
+            active: true,
+            block: "A",
+            load: 3667.5,
+            loadNorm: 0.593,
+            duration: 65.0,
+            name: "A-DAY 💪",
+          },
+          {
+            date: "2026-03-15",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-03-16",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-03-17",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-03-18",
+            active: true,
+            block: "C",
+            load: 2014.0,
+            loadNorm: 0.326,
+            duration: 65.0,
+            name: "C-DAY🦾",
+          },
+          {
+            date: "2026-03-19",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-03-20",
+            active: true,
+            block: "A",
+            load: 4195.0,
+            loadNorm: 0.678,
+            duration: 58.0,
+            name: "A-DAY 💪",
+          },
+          {
+            date: "2026-03-21",
+            active: true,
+            block: "B",
+            load: 3727.0,
+            loadNorm: 0.603,
+            duration: 50.0,
+            name: "B-DAY 1/2🍑",
+          },
+          {
+            date: "2026-03-22",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-03-23",
+            active: false,
+            block: null,
+            load: 0,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          },
+          {
+            date: "2026-03-24",
+            active: true,
+            block: "B",
+            load: 1712.0,
+            loadNorm: 0.277,
+            duration: 60.0,
+            name: "новая тренировка для квадрицепса",
+          },
+          {
+            date: "2026-03-25",
+            active: true,
+            block: "A",
+            load: 3191.0,
+            loadNorm: 0.516,
+            duration: 62.0,
+            name: "A-DAY 💪",
+          },
+          {
+            date: "2026-03-26",
+            active: true,
+            block: "C",
+            load: 2156.0,
+            loadNorm: 0.349,
+            duration: 53.0,
+            name: "C-DAY🦾",
+          },
+        ],
+        archive: [
+          {
+            date: "2026-02-04",
+            title: "C-DAY🦾",
+            block: "C",
+            duration: 58.0,
+            regions: ["трицепс", "средняя дельта", "передняя дельта"],
+            note: "",
+            topExercises: [
+              { name: "Lateral Raise (Dumbbell)", weight: 3.0, reps: 54 },
+              { name: "Reverse Fly (Machine)", weight: 2.5, reps: 40 },
+              {
+                name: "Triceps Pushdown (Cable - Straight Bar)",
+                weight: 7.5,
+                reps: 35,
+              },
+            ],
+            loadNorm: 0.254,
+          },
+          {
+            date: "2026-02-06",
+            title: "B-DAY 1/2🍑",
+            block: "B",
+            duration: 57.0,
+            regions: ["квадрицепс", "ягодицы", "широчайшие"],
+            note: "",
+            topExercises: [
+              { name: "Hip Abductor (Machine)", weight: 20.0, reps: 60 },
+              { name: "Seated Leg Press (Machine)", weight: 50.0, reps: 36 },
+              { name: "Leg Extension (Machine)", weight: 25.0, reps: 41 },
+            ],
+            loadNorm: 1.0,
+          },
+          {
+            date: "2026-02-11",
+            title: "A-DAY 💪",
+            block: "A",
+            duration: 53.0,
+            regions: ["широчайшие", "бицепс", "верх спины"],
+            note: "",
+            topExercises: [
+              { name: "Pull Up (Assisted)", weight: 35.0, reps: 38 },
+              { name: "Lat Pulldown (Cable)", weight: 20.0, reps: 45 },
+              { name: "Seated Row (Cable)", weight: 20.0, reps: 32 },
+            ],
+            loadNorm: 0.581,
+          },
+          {
+            date: "2026-02-12",
+            title: "C-DAY🦾",
+            block: "C",
+            duration: 55.0,
+            regions: ["трицепс", "средняя дельта", "задняя дельта"],
+            note: "",
+            topExercises: [
+              { name: "Reverse Fly (Machine)", weight: 2.5, reps: 55 },
+              { name: "Lateral Raise (Dumbbell)", weight: 3.0, reps: 50 },
+              { name: "Chin Up (Assisted)", weight: 35.0, reps: 16 },
+            ],
+            loadNorm: 0.358,
+          },
+          {
+            date: "2026-02-14",
+            title: "B-DAY 2/2 🍑",
+            block: "B",
+            duration: 38.0,
+            regions: ["ягодицы", "квадрицепс", "внутренняя часть бедра"],
+            note: "",
+            topExercises: [
+              { name: "Glute Kickback (Machine)", weight: 7.5, reps: 60 },
+              { name: "Leg Extension (Machine)", weight: 25.0, reps: 39 },
+              { name: "Hip Adductor (Machine)", weight: 12.5, reps: 42 },
+            ],
+            loadNorm: 0.559,
+          },
+          {
+            date: "2026-02-16",
+            title: "A-DAY 💪",
+            block: "A",
+            duration: 46.0,
+            regions: ["широчайшие", "бицепс", "верх спины"],
+            note: "",
+            topExercises: [
+              { name: "Lat Pulldown (Cable)", weight: 25.0, reps: 35 },
+              { name: "Pull Up (Assisted)", weight: 28.0, reps: 30 },
+              { name: "Seated Row (Cable)", weight: 15.0, reps: 35 },
+            ],
+            loadNorm: 0.455,
+          },
+          {
+            date: "2026-02-18",
+            title: "C-DAY🦾",
+            block: "C",
+            duration: 68.0,
+            regions: ["трицепс", "средняя дельта", "широчайшие"],
+            note: "",
+            topExercises: [
+              { name: "Reverse Fly (Machine)", weight: 2.5, reps: 59 },
+              { name: "Lateral Raise (Dumbbell)", weight: 3.0, reps: 50 },
+              { name: "Pull Up (Assisted)", weight: 28.0, reps: 32 },
+            ],
+            loadNorm: 0.444,
+          },
+          {
+            date: "2026-02-19",
+            title: "B-DAY 1/2🍑",
+            block: "B",
+            duration: 75.0,
+            regions: ["ягодицы", "бицепс бедра", "квадрицепс"],
+            note: "",
+            topExercises: [
+              { name: "Glute Kickback (Machine)", weight: 10.0, reps: 80 },
+              { name: "Seated Leg Press (Machine)", weight: 50.0, reps: 36 },
+              { name: "Hip Abductor (Machine)", weight: 20.0, reps: 48 },
+            ],
+            loadNorm: 0.924,
+          },
+          {
+            date: "2026-02-21",
+            title: "A-DAY 💪",
+            block: "A",
+            duration: 65.0,
+            regions: ["широчайшие", "бицепс", "верх спины"],
+            note: "",
+            topExercises: [
+              { name: "Lat Pulldown (Cable)", weight: 25.0, reps: 33 },
+              { name: "Seated Row (Cable)", weight: 20.0, reps: 32 },
+              { name: "Chest Press (Machine)", weight: 15.0, reps: 33 },
+            ],
+            loadNorm: 0.525,
+          },
+          {
+            date: "2026-02-23",
+            title: "C-DAY🦾",
+            block: "C",
+            duration: 63.0,
+            regions: ["трицепс", "широчайшие", "верх спины"],
+            note: "",
+            topExercises: [
+              { name: "Reverse Fly (Machine)", weight: 2.5, reps: 80 },
+              { name: "Lateral Raise (Dumbbell)", weight: 3.0, reps: 50 },
+              {
+                name: "Triceps Pushdown (Cable - Straight Bar)",
+                weight: 10.0,
+                reps: 26,
+              },
+            ],
+            loadNorm: 0.35,
+          },
+          {
+            date: "2026-02-25",
+            title: "B-DAY 2/2 🦵",
+            block: "B",
+            duration: 60.0,
+            regions: ["бицепс бедра", "ягодицы", "квадрицепс"],
+            note: "",
+            topExercises: [
+              { name: "Seated Leg Press (Machine)", weight: 60.0, reps: 29 },
+              { name: "Hip Adductor (Machine)", weight: 12.5, reps: 40 },
+              { name: "Lying Leg Curl (Machine)", weight: 17.5, reps: 30 },
+            ],
+            loadNorm: 0.688,
+          },
+          {
+            date: "2026-02-26",
+            title: "A-DAY 💪",
+            block: "A",
+            duration: 66.0,
+            regions: ["широчайшие", "бицепс", "верх спины"],
+            note: "",
+            topExercises: [
+              { name: "izometric chin-up", weight: 20.0, reps: 45 },
+              { name: "Pull Up (Assisted)", weight: 28.0, reps: 37 },
+              { name: "Lat Pulldown (Cable)", weight: 30.0, reps: 30 },
+            ],
+            loadNorm: 0.753,
+          },
+          {
+            date: "2026-02-28",
+            title: "C-DAY🦾",
+            block: "C",
+            duration: 70.0,
+            regions: ["трицепс", "средняя дельта", "задняя дельта"],
+            note: "",
+            topExercises: [
+              { name: "Lateral Raise (Dumbbell)", weight: 3.0, reps: 72 },
+              { name: "Reverse Fly (Machine)", weight: 5.0, reps: 70 },
+              { name: "Hip Abductor (Machine)", weight: 20.0, reps: 40 },
+            ],
+            loadNorm: 0.573,
+          },
+          {
+            date: "2026-03-02",
+            title: "A-DAY 💪",
+            block: "A",
+            duration: 53.0,
+            regions: ["широчайшие", "бицепс", "верх спины"],
+            note: "",
+            topExercises: [
+              { name: "Pull Up (Assisted)", weight: 28.0, reps: 30 },
+              { name: "Lat Pulldown (Cable)", weight: 30.0, reps: 26 },
+              { name: "Chest Press (Machine)", weight: 17.5, reps: 30 },
+            ],
+            loadNorm: 0.495,
+          },
+          {
+            date: "2026-03-04",
+            title: "B-DAY 2/2 🦵",
+            block: "B",
+            duration: 72.0,
+            regions: ["бицепс бедра", "ягодицы", "квадрицепс"],
+            note: "",
+            topExercises: [
+              { name: "Seated Leg Press (Machine)", weight: 60.0, reps: 30 },
+              { name: "Hip Adductor (Machine)", weight: 17.5, reps: 50 },
+              { name: "Lying Leg Curl (Machine)", weight: 17.5, reps: 30 },
+            ],
+            loadNorm: 0.749,
+          },
+          {
+            date: "2026-03-05",
+            title: "C-DAY🦾",
+            block: "C",
+            duration: 82.0,
+            regions: ["трицепс", "средняя дельта", "задняя дельта"],
+            note: "",
+            topExercises: [
+              { name: "Reverse Fly (Machine)", weight: 2.5, reps: 80 },
+              { name: "Lateral Raise (Dumbbell)", weight: 3.0, reps: 70 },
+              { name: "Hip Abductor (Machine)", weight: 20.0, reps: 30 },
+            ],
+            loadNorm: 0.428,
+          },
+          {
+            date: "2026-03-08",
+            title: "A-DAY 💪",
+            block: "A",
+            duration: 81.0,
+            regions: ["широчайшие", "бицепс", "верх спины"],
+            note: "",
+            topExercises: [
+              { name: "Pull Up (Assisted)", weight: 28.0, reps: 31 },
+              { name: "Lat Pulldown (Cable)", weight: 30.0, reps: 29 },
+              { name: "Hip Abductor (Machine)", weight: 25.0, reps: 30 },
+            ],
+            loadNorm: 0.735,
+          },
+          {
+            date: "2026-03-11",
+            title: "B-DAY 1/2🍑",
+            block: "B",
+            duration: 46.0,
+            regions: ["ягодицы", "квадрицепс", "бицепс бедра"],
+            note: "",
+            topExercises: [
+              { name: "Seated Leg Press (Machine)", weight: 70.0, reps: 27 },
+              { name: "Hip Adductor (Machine)", weight: 17.5, reps: 37 },
+              { name: "Hip Thrust (Barbell)", weight: 20.0, reps: 25 },
+            ],
+            loadNorm: 0.595,
+          },
+          {
+            date: "2026-03-12",
+            title: "C-DAY🦾",
+            block: "C",
+            duration: 65.0,
+            regions: ["трицепс", "средняя дельта", "задняя дельта"],
+            note: "",
+            topExercises: [
+              { name: "Reverse Fly (Machine)", weight: 5.0, reps: 68 },
+              { name: "Lateral Raise (Dumbbell)", weight: 3.0, reps: 56 },
+              {
+                name: "Triceps Pushdown (Cable - Straight Bar)",
+                weight: 12.5,
+                reps: 20,
+              },
+            ],
+            loadNorm: 0.279,
+          },
+          {
+            date: "2026-03-14",
+            title: "A-DAY 💪",
+            block: "A",
+            duration: 65.0,
+            regions: ["широчайшие", "бицепс", "верх спины"],
+            note: "",
+            topExercises: [
+              { name: "Hip Abductor (Machine)", weight: 27.5, reps: 30 },
+              { name: "Lat Pulldown (Cable)", weight: 35.0, reps: 20 },
+              { name: "Chest Press (Machine)", weight: 25.0, reps: 23 },
+            ],
+            loadNorm: 0.593,
+          },
+          {
+            date: "2026-03-18",
+            title: "C-DAY🦾",
+            block: "C",
+            duration: 65.0,
+            regions: ["трицепс", "средняя дельта", "задняя дельта"],
+            note: "",
+            topExercises: [
+              { name: "Lateral Raise (Dumbbell)", weight: 3.0, reps: 73 },
+              { name: "Reverse Fly (Machine)", weight: 5.0, reps: 63 },
+              { name: "Triceps Extension (Dumbbell)", weight: 8.0, reps: 25 },
+            ],
+            loadNorm: 0.326,
+          },
+          {
+            date: "2026-03-20",
+            title: "A-DAY 💪",
+            block: "A",
+            duration: 58.0,
+            regions: ["широчайшие", "бицепс", "верх спины"],
+            note: "",
+            topExercises: [
+              { name: "Hip Abductor (Machine)", weight: 32.5, reps: 38 },
+              { name: "Lat Pulldown (Cable)", weight: 35.0, reps: 21 },
+              { name: "Seated Row (Cable)", weight: 25.0, reps: 23 },
+            ],
+            loadNorm: 0.678,
+          },
+          {
+            date: "2026-03-21",
+            title: "B-DAY 1/2🍑",
+            block: "B",
+            duration: 50.0,
+            regions: ["ягодицы", "бицепс бедра", "квадрицепс"],
+            note: "glute strength day (рост массы)\\nфокус на механическом напряжении\\n\\n14 рабочих сетов: \\n\\nHip thrust → 3\\nRDL → 3\\nLeg press → 2\\nAbductor → 3\\nKickback → 3",
+            topExercises: [
+              { name: "Seated Leg Press (Machine)", weight: 70.0, reps: 31 },
+              { name: "Romanian Deadlift (Dumbbell)", weight: 9.0, reps: 46 },
+              { name: "Hip Thrust (Barbell)", weight: 20.0, reps: 37 },
+            ],
+            loadNorm: 0.603,
+          },
+          {
+            date: "2026-03-24",
+            title: "новая тренировка для квадрицепса",
+            block: "B",
+            duration: 60.0,
+            regions: ["квадрицепс", "ягодицы"],
+            note: "- тренировать медиальную мышцу квадрицепса",
+            topExercises: [
+              { name: "Leg Press", weight: 10.0, reps: 45 },
+              { name: "Leg Extension (Machine)", weight: 25.0, reps: 35 },
+              { name: "Hack Squat", weight: 0.0, reps: 30 },
+            ],
+            loadNorm: 0.277,
+          },
+          {
+            date: "2026-03-25",
+            title: "A-DAY 💪",
+            block: "A",
+            duration: 62.0,
+            regions: ["широчайшие", "бицепс", "верх спины"],
+            note: "",
+            topExercises: [
+              { name: "Seated Row (Cable)", weight: 30.0, reps: 30 },
+              { name: "Chest Press (Machine)", weight: 25.0, reps: 29 },
+              { name: "Lat Pulldown (Cable)", weight: 40.0, reps: 20 },
+            ],
+            loadNorm: 0.516,
+          },
+          {
+            date: "2026-03-26",
+            title: "C-DAY🦾",
+            block: "C",
+            duration: 53.0,
+            regions: ["трицепс", "средняя дельта", "задняя дельта"],
+            note: "",
+            topExercises: [
+              { name: "Lateral Raise (Dumbbell)", weight: 3.0, reps: 79 },
+              { name: "Reverse Fly (Machine)", weight: 5.0, reps: 68 },
+              {
+                name: "Seated Overhead Press (Dumbbell)",
+                weight: 7.0,
+                reps: 33,
+              },
+            ],
+            loadNorm: 0.349,
+          },
+        ],
+        body: {
+          overall: {
+            sideDelts: 0.361,
+            upperTraps: 0.047,
+            rearDelts: 0.314,
+            upperBack: 0.721,
+            frontDelts: 0.277,
+            triceps: 0.572,
+            upperChest: 0.039,
+            core: 0.121,
+            glutes: 0.58,
+            outerHips: 0.165,
+            quads: 0.372,
+            hamstrings: 0.268,
+            lats: 1.0,
+            biceps: 0.861,
+            forearms: 0.058,
+            innerThigh: 0.084,
+            lowerBack: 0.024,
+            chest: 0.179,
+          },
+          A: {
+            biceps: 0.866,
+            forearms: 0.078,
+            lats: 1.0,
+            upperBack: 0.629,
+            core: 0.078,
+            rearDelts: 0.062,
+            chest: 0.238,
+            frontDelts: 0.107,
+            triceps: 0.095,
+            glutes: 0.078,
+            outerHips: 0.092,
+          },
+          B: {
+            glutes: 1.0,
+            outerHips: 0.119,
+            quads: 0.761,
+            hamstrings: 0.548,
+            lats: 0.256,
+            biceps: 0.218,
+            upperBack: 0.118,
+            core: 0.043,
+            innerThigh: 0.171,
+            lowerBack: 0.048,
+          },
+          C: {
+            sideDelts: 0.72,
+            upperTraps: 0.094,
+            rearDelts: 0.534,
+            upperBack: 0.382,
+            frontDelts: 0.393,
+            triceps: 1.0,
+            upperChest: 0.079,
+            core: 0.084,
+            lats: 0.249,
+            biceps: 0.209,
+            glutes: 0.065,
+            outerHips: 0.077,
+          },
+        },
+        bodyTopExercises: {
+          overall: {
+            sideDelts: [
+              { name: "Lateral Raise (Dumbbell)", score: 2258.9 },
+              { name: "Seated Overhead Press (Dumbbell)", score: 848.1 },
+            ],
+            upperTraps: [{ name: "Lateral Raise (Dumbbell)", score: 406.6 }],
+            rearDelts: [
+              { name: "Reverse Fly (Machine)", score: 2303.8 },
+              { name: "Seated Row (Cable)", score: 400.4 },
+            ],
+            upperBack: [
+              { name: "Seated Row (Cable)", score: 2002.1 },
+              { name: "Pull Up (Assisted)", score: 1539.0 },
+              { name: "Reverse Fly (Machine)", score: 1151.9 },
+              { name: "Lat Pulldown (Cable)", score: 751.0 },
+            ],
+            frontDelts: [
+              { name: "Seated Overhead Press (Dumbbell)", score: 1696.3 },
+              { name: "Chest Press (Machine)", score: 692.7 },
+            ],
+            triceps: [
+              {
+                name: "Triceps Pushdown (Cable - Straight Bar)",
+                score: 1826.8,
+              },
+              { name: "Triceps Extension (Dumbbell)", score: 1726.1 },
+              { name: "Seated Overhead Press (Dumbbell)", score: 763.3 },
+              { name: "Chest Press (Machine)", score: 615.7 },
+            ],
+            upperChest: [
+              { name: "Seated Overhead Press (Dumbbell)", score: 339.3 },
+            ],
+            core: [
+              { name: "Pull Up (Assisted)", score: 513.0 },
+              { name: "Seated Overhead Press (Dumbbell)", score: 169.6 },
+              { name: "chin up (negative)", score: 77.2 },
+              { name: "Pull Up (Band)", score: 77.2 },
+            ],
+            glutes: [
+              { name: "Hip Thrust (Barbell)", score: 1286.5 },
+              { name: "Hip Abductor (Machine)", score: 1210.4 },
+              { name: "Seated Leg Press (Machine)", score: 843.8 },
+              { name: "Glute Kickback (Machine)", score: 835.0 },
+            ],
+            outerHips: [{ name: "Hip Abductor (Machine)", score: 1424.1 }],
+            quads: [
+              { name: "Seated Leg Press (Machine)", score: 1875.0 },
+              { name: "Leg Extension (Machine)", score: 779.0 },
+              { name: "Leg Press", score: 212.0 },
+              { name: "Hack Squat", score: 180.0 },
+            ],
+            hamstrings: [
+              { name: "Romanian Deadlift (Dumbbell)", score: 925.2 },
+              { name: "Lying Leg Curl (Machine)", score: 648.7 },
+              { name: "Seated Leg Press (Machine)", score: 375.0 },
+              { name: "Hip Thrust (Barbell)", score: 360.2 },
+            ],
+            lats: [
+              { name: "Pull Up (Assisted)", score: 3420.0 },
+              { name: "Lat Pulldown (Cable)", score: 2145.8 },
+              { name: "Seated Row (Cable)", score: 1441.5 },
+              { name: "Pull Up (Band)", score: 428.8 },
+            ],
+            biceps: [
+              { name: "Pull Up (Assisted)", score: 2223.0 },
+              { name: "Bicep Curl (Dumbbell)", score: 1408.0 },
+              { name: "Lat Pulldown (Cable)", score: 965.6 },
+              { name: "Seated Row (Cable)", score: 760.8 },
+            ],
+            forearms: [
+              { name: "Bicep Curl (Dumbbell)", score: 352.0 },
+              { name: "Reverse Curl (Dumbbell)", score: 152.0 },
+            ],
+            innerThigh: [{ name: "Hip Adductor (Machine)", score: 722.8 }],
+            lowerBack: [{ name: "Romanian Deadlift (Dumbbell)", score: 203.5 }],
+            chest: [{ name: "Chest Press (Machine)", score: 1539.3 }],
+          },
+          A: {
+            biceps: [
+              { name: "Bicep Curl (Dumbbell)", score: 1408.0 },
+              { name: "Pull Up (Assisted)", score: 1390.0 },
+              { name: "Lat Pulldown (Cable)", score: 965.6 },
+              { name: "Seated Row (Cable)", score: 760.8 },
+            ],
+            forearms: [
+              { name: "Bicep Curl (Dumbbell)", score: 352.0 },
+              { name: "Reverse Curl (Dumbbell)", score: 152.0 },
+            ],
+            lats: [
+              { name: "Lat Pulldown (Cable)", score: 2145.8 },
+              { name: "Pull Up (Assisted)", score: 2138.4 },
+              { name: "Seated Row (Cable)", score: 1441.5 },
+              { name: "chin up (negative)", score: 216.0 },
+            ],
+            upperBack: [
+              { name: "Seated Row (Cable)", score: 2002.1 },
+              { name: "Pull Up (Assisted)", score: 962.3 },
+              { name: "Lat Pulldown (Cable)", score: 751.0 },
+              { name: "chin up (negative)", score: 108.0 },
+            ],
+            core: [
+              { name: "Pull Up (Assisted)", score: 320.8 },
+              { name: "chin up (negative)", score: 54.0 },
+              { name: "izometric chin-up", score: 48.0 },
+              { name: "chin up (band)", score: 41.3 },
+            ],
+            rearDelts: [{ name: "Seated Row (Cable)", score: 400.4 }],
+            chest: [{ name: "Chest Press (Machine)", score: 1539.3 }],
+            frontDelts: [{ name: "Chest Press (Machine)", score: 692.7 }],
+            triceps: [{ name: "Chest Press (Machine)", score: 615.7 }],
+            glutes: [{ name: "Hip Abductor (Machine)", score: 503.1 }],
+            outerHips: [{ name: "Hip Abductor (Machine)", score: 591.9 }],
+          },
+          B: {
+            glutes: [
+              { name: "Hip Thrust (Barbell)", score: 1286.5 },
+              { name: "Seated Leg Press (Machine)", score: 843.8 },
+              { name: "Glute Kickback (Machine)", score: 835.0 },
+              { name: "Romanian Deadlift (Dumbbell)", score: 647.6 },
+            ],
+            outerHips: [{ name: "Hip Abductor (Machine)", score: 500.2 }],
+            quads: [
+              { name: "Seated Leg Press (Machine)", score: 1875.0 },
+              { name: "Leg Extension (Machine)", score: 779.0 },
+              { name: "Leg Press", score: 212.0 },
+              { name: "Hack Squat", score: 180.0 },
+            ],
+            hamstrings: [
+              { name: "Romanian Deadlift (Dumbbell)", score: 925.2 },
+              { name: "Lying Leg Curl (Machine)", score: 648.7 },
+              { name: "Seated Leg Press (Machine)", score: 375.0 },
+              { name: "Hip Thrust (Barbell)", score: 360.2 },
+            ],
+            lats: [
+              { name: "Pull Up (Assisted)", score: 828.3 },
+              { name: "chin up (negative)", score: 92.9 },
+              { name: "chin up (band)", score: 92.2 },
+              { name: "Chin Up (Assisted)", score: 64.2 },
+            ],
+            biceps: [
+              { name: "Pull Up (Assisted)", score: 538.4 },
+              { name: "chin up (negative)", score: 147.1 },
+              { name: "chin up (band)", score: 141.8 },
+              { name: "Chin Up (Assisted)", score: 91.7 },
+            ],
+            upperBack: [
+              { name: "Pull Up (Assisted)", score: 372.7 },
+              { name: "chin up (negative)", score: 46.4 },
+              { name: "chin up (band)", score: 45.4 },
+              { name: "Chin Up (Assisted)", score: 32.1 },
+            ],
+            core: [
+              { name: "Pull Up (Assisted)", score: 124.2 },
+              { name: "chin up (negative)", score: 23.2 },
+              { name: "chin up (band)", score: 21.3 },
+              { name: "Chin Up (Assisted)", score: 13.8 },
+            ],
+            innerThigh: [{ name: "Hip Adductor (Machine)", score: 722.8 }],
+            lowerBack: [{ name: "Romanian Deadlift (Dumbbell)", score: 203.5 }],
+          },
+          C: {
+            sideDelts: [
+              { name: "Lateral Raise (Dumbbell)", score: 2258.9 },
+              { name: "Seated Overhead Press (Dumbbell)", score: 848.1 },
+            ],
+            upperTraps: [{ name: "Lateral Raise (Dumbbell)", score: 406.6 }],
+            rearDelts: [{ name: "Reverse Fly (Machine)", score: 2303.8 }],
+            upperBack: [
+              { name: "Reverse Fly (Machine)", score: 1151.9 },
+              { name: "Pull Up (Assisted)", score: 204.0 },
+              { name: "Chin Up (Assisted)", score: 130.6 },
+              { name: "Pull Up (Band)", score: 97.0 },
+            ],
+            frontDelts: [
+              { name: "Seated Overhead Press (Dumbbell)", score: 1696.3 },
+            ],
+            triceps: [
+              {
+                name: "Triceps Pushdown (Cable - Straight Bar)",
+                score: 1826.8,
+              },
+              { name: "Triceps Extension (Dumbbell)", score: 1726.1 },
+              { name: "Seated Overhead Press (Dumbbell)", score: 763.3 },
+            ],
+            upperChest: [
+              { name: "Seated Overhead Press (Dumbbell)", score: 339.3 },
+            ],
+            core: [
+              { name: "Seated Overhead Press (Dumbbell)", score: 169.6 },
+              { name: "Pull Up (Assisted)", score: 68.0 },
+              { name: "Chin Up (Assisted)", score: 56.0 },
+              { name: "Pull Up (Band)", score: 38.8 },
+            ],
+            lats: [
+              { name: "Pull Up (Assisted)", score: 453.3 },
+              { name: "Chin Up (Assisted)", score: 261.2 },
+              { name: "Pull Up (Band)", score: 215.5 },
+              { name: "pull up (negative)", score: 143.6 },
+            ],
+            biceps: [
+              { name: "Chin Up (Assisted)", score: 373.2 },
+              { name: "Pull Up (Assisted)", score: 294.6 },
+              { name: "Pull Up (Band)", score: 140.1 },
+              { name: "pull up (negative)", score: 95.8 },
+            ],
+            glutes: [{ name: "Hip Abductor (Machine)", score: 282.2 }],
+            outerHips: [{ name: "Hip Abductor (Machine)", score: 332.0 }],
+          },
+        },
+        regionBlockDist: {
+          sideDelts: { A: 0.0, B: 0.0, C: 1.0 },
+          upperTraps: { A: 0.0, B: 0.0, C: 1.0 },
+          rearDelts: { A: 0.148, B: 0.0, C: 0.852 },
+          upperBack: { A: 0.655, B: 0.08, C: 0.265 },
+          frontDelts: { A: 0.29, B: 0.0, C: 0.71 },
+          triceps: { A: 0.125, B: 0.0, C: 0.875 },
+          upperChest: { A: 0.0, B: 0.0, C: 1.0 },
+          core: { A: 0.48, B: 0.174, C: 0.345 },
+          glutes: { A: 0.101, B: 0.843, C: 0.056 },
+          outerHips: { A: 0.416, B: 0.351, C: 0.233 },
+          quads: { A: 0.0, B: 1.0, C: 0.0 },
+          hamstrings: { A: 0.0, B: 1.0, C: 0.0 },
+          lats: { A: 0.75, B: 0.125, C: 0.125 },
+          biceps: { A: 0.754, B: 0.124, C: 0.122 },
+          forearms: { A: 1.0, B: 0.0, C: 0.0 },
+          innerThigh: { A: 0.0, B: 1.0, C: 0.0 },
+          lowerBack: { A: 0.0, B: 1.0, C: 0.0 },
+          chest: { A: 1.0, B: 0.0, C: 0.0 },
+        },
+        blockSummary: {
+          A: {
+            title: "тяга / спина / приближение к подтягиванию",
+            sessions: 9,
+            topRegions: [
+              "широчайшие",
+              "бицепс",
+              "верх спины",
+              "грудь",
+              "передняя дельта",
+            ],
+          },
+          B: {
+            title: "низ тела / опора / механическое напряжение",
+            sessions: 8,
+            topRegions: [
+              "ягодицы",
+              "квадрицепс",
+              "бицепс бедра",
+              "широчайшие",
+              "бицепс",
+            ],
+          },
+          C: {
+            title: "плечи / руки / плотность верха",
+            sessions: 9,
+            topRegions: [
+              "трицепс",
+              "средняя дельта",
+              "задняя дельта",
+              "передняя дельта",
+              "верх спины",
+            ],
+          },
+        },
+        pullupPhases: [
+          {
+            stage: "1",
+            title: "начало пути",
+            date: "06 фев",
+            text: "начинаю подтягивания через 35 кг помощи гравитрон. тело еще не тянет себя само, оно учится маршруту движения.",
+            metric: "35 кг помощи",
+          },
+          {
+            stage: "2",
+            title: "первое снижение помощи",
+            date: "16 фев",
+            text: "снижаю помощь гравитрона до 28 кг. это первый отчетливый сдвиг в главной линии цикла.",
+            metric: "28 кг помощи",
+          },
+          {
+            stage: "3",
+            title: "новые формы помощи",
+            date: "23 фев",
+            text: "появляются резина и негативы. движение раскладывается на более мелкие, но автономные фрагменты.",
+            metric: "band + negatives",
+          },
+          {
+            stage: "4",
+            title: "второе снижение помощи",
+            date: "25 фев",
+            text: "помощь гравитрона доходит до 21 кг, затем включается удержание и работа на отдельных фазах подтягивания.",
+            metric: "21 кг помощи",
+          },
+          {
+            stage: "5",
+            title: "третье снижение помощи",
+            date: "18 мар",
+            text: "снижаю помощь гравитрона до 14 кг. это уже не просто поддержка техники, а приближение к собственному весу.",
+            metric: "14 кг помощи",
+          },
+          {
+            stage: "6",
+            title: "смешанный режим",
+            date: "20 мар",
+            text: "резина ослабевает до 25 кг при 14 повторениях: часть работы уже переносится на само тело.",
+            metric: "25 кг band",
+          },
+          {
+            stage: "7",
+            title: "закрепление нейроадаптации",
+            date: "25 мар",
+            text: "14 кг помощи сохраняются, а негативы доходят до 12 повторений. путь еще не закончен, но нейроадаптация позади.",
+            metric: "12 negatives",
+          },
+        ],
+        shifts: [
+          {
+            key: "assist",
+            label: "подтягивания с помощью гравитрона",
+            start: "35 кг",
+            end: "14 кг",
+            delta: "−21 кг",
+            sub: "меньше помощи — больше собственного тела",
+            color: "#8bd8ff",
+          },
+          {
+            key: "ohp",
+            label: "жим над головой",
+            start: "4 кг",
+            end: "7 кг",
+            delta: "+3 кг",
+            sub: "рост силы без потери объема повторений",
+            color: "#c7b0ff",
+          },
+          {
+            key: "chest",
+            label: "chest press",
+            start: "15 кг",
+            end: "25 кг",
+            delta: "+10 кг",
+            sub: "передняя цепь включается отчетливее",
+            color: "#ffb3c8",
+          },
+          {
+            key: "row",
+            label: "горизонтальная тяга",
+            start: "20 кг",
+            end: "30 кг",
+            delta: "+10 кг",
+            sub: "спина уплотняется и собирает корпус",
+            color: "#8ee7ff",
+          },
+          {
+            key: "leg",
+            label: "жим ногами",
+            start: "50 кг",
+            end: "70 кг",
+            delta: "+20 кг",
+            sub: "низ тела становится опорой, а не фоном",
+            color: "#ffd48f",
+          },
+          {
+            key: "thrust",
+            label: "hip thrust",
+            start: "10 кг",
+            end: "20 кг",
+            delta: "+10 кг",
+            sub: "ягодицы переходят из активации в нагрузку",
+            color: "#ff9ecf",
+          },
+        ],
+        stats: {
+          sessionCount: 26,
+          dayCount: 51,
+          meanGap: 2.0,
+          dateStart: "2026-02-04",
+          dateEnd: "2026-03-26",
+          topRegions: [
+            "широчайшие",
+            "бицепс",
+            "верх спины",
+            "ягодицы",
+            "трицепс",
+            "квадрицепс",
+          ],
+          avgDuration: 59,
+        },
+      };
+
+      const REGION_NAMES = {
+        shoulders: "плечи",
+        upperChest: "верх груди",
+        chest: "грудь",
+        frontDelts: "передняя дельта",
+        sideDelts: "средняя дельта",
+        rearDelts: "задняя дельта",
+        upperTraps: "трапеции",
+        upperBack: "верх спины",
+        lats: "широчайшие",
+        lowerBack: "низ спины",
+        biceps: "бицепс",
+        triceps: "трицепс",
+        forearms: "предплечья",
+        core: "кор",
+        glutes: "ягодицы",
+        outerHips: "наружная часть бедра",
+        innerThigh: "внутренняя часть бедра",
+        quads: "квадрицепс",
+        hamstrings: "бицепс бедра",
+      };
+
+      const ZONE_LAYOUT = [
+        {
+          key: "upperChest",
+          x: 50,
+          y: 24,
+          w: 18,
+          h: 10,
+          color: "#8fe7ff",
+          blur: 2,
+        },
+        { key: "chest", x: 50, y: 30, w: 22, h: 13, color: "#ffb0b7", blur: 1 },
+        {
+          key: "frontDelts",
+          x: 36,
+          y: 26,
+          w: 11,
+          h: 10,
+          color: "#f9a8ff",
+          blur: 2,
+        },
+        {
+          key: "frontDelts",
+          x: 64,
+          y: 26,
+          w: 11,
+          h: 10,
+          color: "#f9a8ff",
+          blur: 2,
+        },
+        {
+          key: "sideDelts",
+          x: 31,
+          y: 28,
+          w: 11,
+          h: 11,
+          color: "#caa3ff",
+          blur: 2,
+        },
+        {
+          key: "sideDelts",
+          x: 69,
+          y: 28,
+          w: 11,
+          h: 11,
+          color: "#caa3ff",
+          blur: 2,
+        },
+        {
+          key: "rearDelts",
+          x: 28,
+          y: 30,
+          w: 10,
+          h: 9,
+          color: "#8fbaff",
+          blur: 3,
+        },
+        {
+          key: "rearDelts",
+          x: 72,
+          y: 30,
+          w: 10,
+          h: 9,
+          color: "#8fbaff",
+          blur: 3,
+        },
+        {
+          key: "upperTraps",
+          x: 44,
+          y: 22,
+          w: 9,
+          h: 6,
+          color: "#f8d28f",
+          blur: 1,
+        },
+        {
+          key: "upperTraps",
+          x: 56,
+          y: 22,
+          w: 9,
+          h: 6,
+          color: "#f8d28f",
+          blur: 1,
+        },
+        {
+          key: "upperBack",
+          x: 50,
+          y: 33,
+          w: 28,
+          h: 16,
+          color: "#91dbff",
+          blur: 3,
+        },
+        { key: "lats", x: 37, y: 41, w: 13, h: 20, color: "#7de1ff", blur: 4 },
+        { key: "lats", x: 63, y: 41, w: 13, h: 20, color: "#7de1ff", blur: 4 },
+        {
+          key: "biceps",
+          x: 25,
+          y: 38,
+          w: 9,
+          h: 15,
+          color: "#ffcc8a",
+          blur: 1,
+          r: -12,
+        },
+        {
+          key: "biceps",
+          x: 75,
+          y: 38,
+          w: 9,
+          h: 15,
+          color: "#ffcc8a",
+          blur: 1,
+          r: 12,
+        },
+        {
+          key: "triceps",
+          x: 21.5,
+          y: 39.5,
+          w: 9,
+          h: 16,
+          color: "#ff99df",
+          blur: 1,
+          r: -14,
+        },
+        {
+          key: "triceps",
+          x: 78.5,
+          y: 39.5,
+          w: 9,
+          h: 16,
+          color: "#ff99df",
+          blur: 1,
+          r: 14,
+        },
+        {
+          key: "forearms",
+          x: 17.5,
+          y: 51,
+          w: 8,
+          h: 13,
+          color: "#bbd5ff",
+          blur: 1,
+          r: -20,
+        },
+        {
+          key: "forearms",
+          x: 82.5,
+          y: 51,
+          w: 8,
+          h: 13,
+          color: "#bbd5ff",
+          blur: 1,
+          r: 20,
+        },
+        { key: "core", x: 50, y: 44, w: 18, h: 22, color: "#f6e79a", blur: 2 },
+        {
+          key: "lowerBack",
+          x: 50,
+          y: 48,
+          w: 18,
+          h: 12,
+          color: "#8fe7ff",
+          blur: 3,
+        },
+        {
+          key: "glutes",
+          x: 50,
+          y: 60,
+          w: 22,
+          h: 12,
+          color: "#ffa5cf",
+          blur: 2,
+        },
+        {
+          key: "outerHips",
+          x: 37,
+          y: 60,
+          w: 10,
+          h: 11,
+          color: "#e2a4ff",
+          blur: 2,
+        },
+        {
+          key: "outerHips",
+          x: 63,
+          y: 60,
+          w: 10,
+          h: 11,
+          color: "#e2a4ff",
+          blur: 2,
+        },
+        {
+          key: "innerThigh",
+          x: 46,
+          y: 72,
+          w: 8,
+          h: 16,
+          color: "#f7d58b",
+          blur: 1,
+        },
+        {
+          key: "innerThigh",
+          x: 54,
+          y: 72,
+          w: 8,
+          h: 16,
+          color: "#f7d58b",
+          blur: 1,
+        },
+        { key: "quads", x: 43, y: 79, w: 12, h: 24, color: "#ffd08e", blur: 2 },
+        { key: "quads", x: 57, y: 79, w: 12, h: 24, color: "#ffd08e", blur: 2 },
+        {
+          key: "hamstrings",
+          x: 40,
+          y: 80,
+          w: 9,
+          h: 20,
+          color: "#9cf3d0",
+          blur: 2,
+        },
+        {
+          key: "hamstrings",
+          x: 60,
+          y: 80,
+          w: 9,
+          h: 20,
+          color: "#9cf3d0",
+          blur: 2,
+        },
+      ];
+
+      function formatISODate(iso) {
+        const d = new Date(iso);
+        return new Intl.DateTimeFormat("ru-RU", {
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        }).format(d);
+      }
+      function fmtMin(m) {
+        if (!m) return "—";
+        const rounded = Math.round(m);
+        if (rounded >= 60) {
+          const h = Math.floor(rounded / 60);
+          const mm = rounded % 60;
+          return mm ? `${h}ч ${mm}м` : `${h}ч`;
+        }
+        return `${rounded}м`;
+      }
+      function intensityWord(v) {
+        if (v >= 0.75) return "доминирующий след цикла";
+        if (v >= 0.45) return "устойчиво накапливаемая зона";
+        if (v >= 0.2) return "вторичная, но заметная зона";
+        return "тонкий остаточный след";
+      }
+
+      const io = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) entry.target.classList.add("visible");
+          });
+        },
+        { threshold: 0.16 },
+      );
+      document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+
+      const calendarGrid = document.getElementById("calendarGrid");
+      const cdDate = document.getElementById("calendarDetailDate");
+      const cdTitle = document.getElementById("calendarDetailTitle");
+      const cdCopy = document.getElementById("calendarDetailCopy");
+      const cdList = document.getElementById("calendarDetailList");
+
+      function renderCalendar() {
+        DATA.calendar.forEach((day, idx) => {
+          const btn = document.createElement("button");
+          btn.className = `calendar-cell${day.active ? "" : " empty"}`;
+          if (day.active) btn.dataset.block = day.block;
+          btn.style.setProperty(
+            "--scale",
+            day.active ? (0.38 + day.loadNorm * 1.05).toFixed(2) : ".38",
+          );
+          btn.innerHTML = `<span class="calendar-orb"></span><span class="calendar-label">${String(idx + 1).padStart(2, "0")}</span>`;
+          btn.addEventListener("click", () => selectCalendar(idx, btn));
+          calendarGrid.appendChild(btn);
+          day._button = btn;
+        });
+        const firstActive = DATA.calendar.findIndex((d) => d.active);
+        selectCalendar(
+          firstActive >= 0 ? firstActive : 0,
+          DATA.calendar[firstActive >= 0 ? firstActive : 0]._button,
+        );
+      }
+      function selectCalendar(index, btn) {
+        document
+          .querySelectorAll(".calendar-cell")
+          .forEach((el) => el.classList.remove("active-day"));
+        if (btn) btn.classList.add("active-day");
+        const day = DATA.calendar[index];
+        cdDate.textContent = formatISODate(day.date);
+        if (!day.active) {
+          cdTitle.textContent = "день тишины";
+          cdCopy.textContent =
+            "в этот день цикл не производил новый след нагрузки. темный промежуток здесь так же важен, как и светящийся день.";
+          cdList.innerHTML = `
+      <div class="detail-item"><span>статус</span><strong>восстановление / пауза</strong></div>
+      <div class="detail-item"><span>роль в цикле</span><strong>пустота удерживает ритм не хуже тренировки</strong></div>
+    `;
+          return;
+        }
+        const blockNames = {
+          A: "A — тяга / спина",
+          B: "B — низ тела / опора",
+          C: "C — плечи / руки",
+        };
+        cdTitle.textContent = day.name;
+        cdCopy.textContent = `этот день принадлежит режиму ${day.block}. свечение сильнее, потому что выше плотность нагрузки: больше рабочих следов, больше телесного материала внутри одной сессии.`;
+        cdList.innerHTML = `
+    <div class="detail-item"><span>режим</span><strong>${blockNames[day.block]}</strong></div>
+    <div class="detail-item"><span>длительность</span><strong>${fmtMin(day.duration)}</strong></div>
+    <div class="detail-item"><span>относительная плотность</span><strong>${Math.round(day.loadNorm * 100)}%</strong></div>
+  `;
+      }
+
+      const hotspotMount = document.getElementById("hotspotMount");
+      const bodyModelViewer = document.getElementById("bodyModelViewer");
+      const modelStatus = document.getElementById("modelStatus");
+      const regionTitle = document.getElementById("regionTitle");
+      const regionCopy = document.getElementById("regionCopy");
+      const regionExercises = document.getElementById("regionExercises");
+      const regionKpis = document.getElementById("regionKpis");
+      const bodyCaption = document.getElementById("bodyCaption");
+      const bodyFilters = document.getElementById("bodyFilters");
+      const blockMiniList = document.getElementById("blockMiniList");
+
+      let bodyMode = "overall";
+      let selectedRegion = "shoulders";
+
+      const BODY_REGION_KEYS = [
+        "shoulders",
+        "lats",
+        "upperBack",
+        "chest",
+        "biceps",
+        "triceps",
+        "glutes",
+        "quads",
+        "hamstrings",
+      ];
+
+      const BODY_REGION_SOURCES = {
+        shoulders: ["frontDelts", "sideDelts", "rearDelts", "upperTraps"],
+        lats: ["lats"],
+        upperBack: ["upperBack"],
+        chest: ["chest", "upperChest"],
+        biceps: ["biceps"],
+        triceps: ["triceps"],
+        glutes: ["glutes", "outerHips"],
+        quads: ["quads", "innerThigh"],
+        hamstrings: ["hamstrings", "lowerBack"],
+      };
+
+      const REGION_MODEL_NORMALIZED = {
+        shoulders: {
+          color: "#b99cff",
+          anchor: { x: 0.8, y: 0.81, z: 0.2, nx: 0, ny: 0, nz: 1 },
+          glows: [
+            { x: -0.44, y: 0.79, z: 0.18, size: "primary" },
+            { x: 0.44, y: 0.79, z: 0.18, size: "primary" },
+            { x: -0.28, y: 0.75, z: 0.16, size: "support" },
+            { x: 0.28, y: 0.75, z: 0.16, size: "support" },
+          ],
+        },
+        lats: {
+          color: "#7fd5ff",
+          anchor: { x: 0, y: 0.6, z: -0.18, nx: 0, ny: 0, nz: -1 },
+          glows: [
+            { x: -0.3, y: 0.6, z: -0.18, size: "primary" },
+            { x: 0.3, y: 0.6, z: -0.18, size: "primary" },
+            { x: -0.22, y: 0.53, z: -0.14, size: "support" },
+            { x: 0.22, y: 0.53, z: -0.14, size: "support" },
+          ],
+        },
+        upperBack: {
+          color: "#9ad5ff",
+          anchor: { x: 0, y: 0.71, z: 0.9, nx: 0, ny: 0, nz: -1 },
+          glows: [
+            { x: -0.16, y: 0.71, z: -0.2, size: "primary" },
+            { x: 0.16, y: 0.71, z: -0.2, size: "primary" },
+            { x: 0, y: 0.66, z: -0.16, size: "support" },
+          ],
+        },
+        chest: {
+          color: "#ffd292",
+          anchor: { x: 0, y: 0.66, z: 0.5, nx: 0, ny: 0, nz: 1 },
+          glows: [
+            { x: -0.18, y: 0.66, z: 0.3, size: "primary" },
+            { x: 0.18, y: 0.66, z: 0.3, size: "primary" },
+            { x: 0, y: 0.62, z: 0.26, size: "support" },
+          ],
+        },
+        biceps: {
+          color: "#ffcf8b",
+          anchor: { x: 0.74, y: 0.79, z: 0.18, nx: 1, ny: 0, nz: 0 },
+          glows: [
+            { x: -0.62, y: 0.76, z: 0.18, size: "primary" },
+            { x: 0.62, y: 0.76, z: 0.18, size: "primary" },
+          ],
+        },
+        triceps: {
+          color: "#ff9fcf",
+          anchor: { x: 0.7, y: 0.7, z: -0.1, nx: 1, ny: 0, nz: 0 },
+          glows: [
+            { x: -0.7, y: 0.7, z: -0.1, size: "primary" },
+            { x: 0.7, y: 0.7, z: -0.1, size: "primary" },
+          ],
+        },
+        glutes: {
+          color: "#ff9fcf",
+          anchor: { x: 0, y: 0.5, z: -0.18, nx: 0, ny: 0, nz: -1 },
+          glows: [
+            { x: -0.12, y: 0.49, z: -0.18, size: "primary" },
+            { x: 0.12, y: 0.49, z: -0.18, size: "primary" },
+            { x: 0, y: 0.45, z: -0.15, size: "support" },
+          ],
+        },
+        quads: {
+          color: "#f2e3a9",
+          anchor: { x: 0, y: 0.36, z: 0.24, nx: 0, ny: 0, nz: 1 },
+          glows: [
+            { x: -0.14, y: 0.39, z: 0.26, size: "primary" },
+            { x: 0.14, y: 0.39, z: 0.26, size: "primary" },
+            { x: -0.12, y: 0.3, z: 0.24, size: "support" },
+            { x: 0.12, y: 0.3, z: 0.24, size: "support" },
+          ],
+        },
+        hamstrings: {
+          color: "#8bf0df",
+          anchor: { x: 0, y: 0.25, z: -0.12, nx: 0, ny: 0, nz: -1 },
+          glows: [
+            { x: -0.12, y: 0.36, z: -0.13, size: "primary" },
+            { x: 0.12, y: 0.36, z: -0.13, size: "primary" },
+            { x: -0.1, y: 0.28, z: -0.12, size: "support" },
+            { x: 0.1, y: 0.28, z: -0.12, size: "support" },
+          ],
+        },
+      };
+
+      const REGION_CAMERA_ORBIT = {
+        shoulders: "180deg 92deg 128%",
+        chest: "180deg 92deg 128%",
+        biceps: "198deg 92deg 128%",
+        triceps: "208deg 92deg 128%",
+        quads: "180deg 94deg 128%",
+        lats: "0deg 92deg 128%",
+        upperBack: "0deg 92deg 128%",
+        glutes: "0deg 96deg 128%",
+        hamstrings: "0deg 98deg 128%",
+      };
+
+      let bodyModelMetrics = null;
+
+      function renderBlockMiniList() {
+        blockMiniList.innerHTML = "";
+        Object.entries(DATA.blockSummary).forEach(([key, val]) => {
+          const div = document.createElement("div");
+          div.className = "mini-item";
+          div.innerHTML = `<strong>${key} — ${val.title}</strong><span>${val.sessions} сессий · ${val.topRegions.slice(0, 3).join(" · ")}</span>`;
+          blockMiniList.appendChild(div);
+        });
+      }
+
+      function applyModelSource() {
+        if (!bodyModelViewer) return;
+        bodyModelViewer.setAttribute("src", "assets/body.glb");
+      }
+
+      function setModelStatus(message) {
+        if (!modelStatus) return;
+        modelStatus.hidden = !message;
+        modelStatus.textContent = message || "";
+      }
+
+      function slotName(region, type, idx = 0) {
+        return `hotspot-${type}-${region}-${idx}`;
+      }
+
+      function formatModelVector(x, y, z) {
+        return `${x.toFixed(4)}m ${y.toFixed(4)}m ${z.toFixed(4)}m`;
+      }
+
+      function normalizeDirection({ nx = 0, ny = 0, nz = 1 }) {
+        const length = Math.hypot(nx, ny, nz) || 1;
+        return {
+          x: nx / length,
+          y: ny / length,
+          z: nz / length,
+        };
+      }
+
+      function readBodyModelMetrics() {
+        if (!bodyModelViewer?.model) return null;
+        try {
+          const center = bodyModelViewer.getBoundingBoxCenter();
+          const dimensions = bodyModelViewer.getDimensions();
+          if (!center || !dimensions) return null;
+
+          return {
+            center: { x: center.x, y: center.y, z: center.z },
+            dimensions: {
+              x: Math.max(dimensions.x, 0.001),
+              y: Math.max(dimensions.y, 0.001),
+              z: Math.max(dimensions.z, 0.001),
+            },
+            effective: {
+              width: Math.max(dimensions.x * 0.48, 0.001),
+              height: Math.max(dimensions.y * 0.84, 0.001),
+              depth: Math.max(dimensions.z * 0.72, 0.001),
+              bottomInset: dimensions.y * 0.07,
+            },
+          };
+        } catch (error) {
+          console.warn("Failed to read body model metrics", error);
+          return null;
+        }
+      }
+
+      function getRegionScale(region) {
+        return (
+          {
+            shoulders: { x: 1.08, z: 0.9 },
+            chest: { x: 0.82, z: 1.04 },
+            upperBack: { x: 0.78, z: 0.98 },
+            lats: { x: 1.02, z: 0.96 },
+            biceps: { x: 1.55, z: 0.78 },
+            triceps: { x: 1.68, z: 0.78 },
+            glutes: { x: 0.72, z: 0.9 },
+            quads: { x: 0.66, z: 0.94 },
+            hamstrings: { x: 0.62, z: 0.84 },
+          }[region] || { x: 1, z: 1 }
+        );
+      }
+
+      function resolveNormalizedPoint(point, region) {
+        if (!bodyModelMetrics) return null;
+
+        const { center, effective } = bodyModelMetrics;
+        const scale = getRegionScale(region);
+
+        const halfWidth = (effective.width * scale.x) / 2;
+        const halfDepth = (effective.depth * scale.z) / 2;
+        const bottom = center.y - effective.height / 2 + effective.bottomInset;
+
+        const resolved = {
+          x: center.x + Math.max(-1, Math.min(1, point.x || 0)) * halfWidth,
+          y: bottom + Math.max(0, Math.min(1, point.y || 0)) * effective.height,
+          z: center.z + Math.max(-1, Math.min(1, point.z || 0)) * halfDepth,
+        };
+
+        const direction = normalizeDirection(point);
+
+        return {
+          position: formatModelVector(resolved.x, resolved.y, resolved.z),
+          normal: formatModelVector(direction.x, direction.y, direction.z),
+        };
+      }
+
+      function applyRegionCamera(region) {
+        if (!bodyModelViewer) return;
+        const orbit = REGION_CAMERA_ORBIT[region] || "180deg 92deg 128%";
+        bodyModelViewer.setAttribute("camera-orbit", orbit);
+      }
+
+      function buildRegionModel() {
+        if (!bodyModelMetrics) return null;
+        return Object.fromEntries(
+          Object.entries(REGION_MODEL_NORMALIZED).map(([region, cfg]) => {
+            const anchor = resolveNormalizedPoint(cfg.anchor, region);
+            return [
+              region,
+              {
+                color: cfg.color,
+                anchor,
+                glows: cfg.glows.map((glow) => ({
+                  ...resolveNormalizedPoint(glow, region),
+                  size: glow.size,
+                })),
+              },
+            ];
+          }),
+        );
+      }
+
+      function getRegionKeys(region) {
+        return BODY_REGION_SOURCES[region] || [region];
+      }
+
+      function average(values) {
+        return values.length
+          ? values.reduce((sum, value) => sum + value, 0) / values.length
+          : 0;
+      }
+
+      function getBodyRegionSnapshot(mode) {
+        const raw = DATA.body[mode] || {};
+        const snapshot = {};
+        BODY_REGION_KEYS.forEach((region) => {
+          const values = getRegionKeys(region)
+            .map((key) => raw[key] || 0)
+            .filter((value) => value > 0);
+          snapshot[region] = values.length ? Math.max(...values) : 0;
+        });
+        return snapshot;
+      }
+
+      function mergeExerciseLists(lists) {
+        const merged = new Map();
+        lists.flat().forEach((item) => {
+          if (!item?.name) return;
+          merged.set(
+            item.name,
+            (merged.get(item.name) || 0) + (item.score || 0),
+          );
+        });
+        return [...merged.entries()]
+          .map(([name, score]) => ({ name, score }))
+          .sort((a, b) => b.score - a.score);
+      }
+
+      function getBodyExerciseSnapshot(mode) {
+        const raw = DATA.bodyTopExercises[mode] || {};
+        const snapshot = {};
+        BODY_REGION_KEYS.forEach((region) => {
+          snapshot[region] = mergeExerciseLists(
+            getRegionKeys(region).map((key) => raw[key] || []),
+          );
+        });
+        return snapshot;
+      }
+
+      function getBodyRegionDistribution(region) {
+        const entries = getRegionKeys(region)
+          .map((key) => DATA.regionBlockDist[key])
+          .filter(Boolean);
+        if (!entries.length) return { A: 0, B: 0, C: 0 };
+        return {
+          A: average(entries.map((item) => item.A || 0)),
+          B: average(entries.map((item) => item.B || 0)),
+          C: average(entries.map((item) => item.C || 0)),
+        };
+      }
+
+      function createHotspotButton({
+        slot,
+        position,
+        normal,
+        region,
+        className,
+        title = "",
+        clickable = false,
+      }) {
+        const el = document.createElement(clickable ? "button" : "div");
+        el.slot = slot;
+        el.className = className;
+        el.dataset.region = region;
+        el.setAttribute("data-position", position);
+        if (normal) el.setAttribute("data-normal", normal);
+        el.style.setProperty("--color", REGION_MODEL_NORMALIZED[region].color);
+        if (title) {
+          el.title = title;
+          el.setAttribute("aria-label", title);
+        } else {
+          el.setAttribute("aria-hidden", "true");
+          el.tabIndex = -1;
+        }
+        if (clickable) {
+          el.type = "button";
+          el.addEventListener("click", () => {
+            selectedRegion = region;
+            updateBody();
+          });
+        }
+        return el;
+      }
+
+      function renderZones() {
+        if (!bodyModelViewer) return;
+        const old = bodyModelViewer.querySelectorAll(
+          ".hotspot-hit, .hotspot-glow, .hotspot-ring",
+        );
+        old.forEach((el) => el.remove());
+
+        const regionModel = buildRegionModel();
+        if (!regionModel) return;
+
+        Object.entries(regionModel).forEach(([region, cfg]) => {
+          const ring = createHotspotButton({
+            slot: slotName(region, "ring"),
+            position: cfg.anchor.position,
+            normal: cfg.anchor.normal,
+            region,
+            className: "hotspot-ring",
+            clickable: false,
+          });
+          bodyModelViewer.appendChild(ring);
+
+          const hit = createHotspotButton({
+            slot: slotName(region, "hit"),
+            position: cfg.anchor.position,
+            normal: cfg.anchor.normal,
+            region,
+            className: "hotspot-hit",
+            title: REGION_NAMES[region],
+            clickable: true,
+          });
+          bodyModelViewer.appendChild(hit);
+
+          cfg.glows.forEach((g, idx) => {
+            const glow = createHotspotButton({
+              slot: slotName(region, "glow", idx),
+              position: g.position,
+              normal: g.normal,
+              region,
+              className: `hotspot-glow region-${region} ${g.size === "primary" ? "primary" : "support"}`,
+              clickable: false,
+            });
+            bodyModelViewer.appendChild(glow);
+          });
+        });
+      }
+
+      if (bodyModelViewer) {
+        if (!customElements.get("model-viewer")) {
+          setModelStatus(
+            "Компонент model-viewer не загрузился. Проверь подключение библиотеки.",
+          );
+        }
+
+        if (location.protocol === "file:") {
+          setModelStatus(
+            "Страница открыта через file://. В таком режиме браузер часто блокирует загрузку .glb. Запусти локальный сервер.",
+          );
+        }
+
+        bodyModelViewer.addEventListener("load", () => {
+          setModelStatus("");
+          bodyModelMetrics = readBodyModelMetrics();
+          renderZones();
+          applyRegionCamera(selectedRegion);
+          updateBody();
+        });
+
+        bodyModelViewer.addEventListener("error", (event) => {
+          const message =
+            location.protocol === "file:"
+              ? "Модель не загружена: открой страницу через локальный сервер, а не напрямую из файла."
+              : "Модель не загружена: проверь путь assets/body.glb и ошибки в консоли браузера.";
+          setModelStatus(message);
+          console.error("bodyModelViewer load error", event);
+        });
+      }
+
+      function updateBody() {
+        const source = getBodyRegionSnapshot(bodyMode);
+        const exercisesSource = getBodyExerciseSnapshot(bodyMode);
+        document
+          .querySelectorAll("#bodyFilters .filter-pill")
+          .forEach((btn) =>
+            btn.classList.toggle("active", btn.dataset.mode === bodyMode),
+          );
+        const topRegion = Object.entries(source).sort(
+          (a, b) => b[1] - a[1],
+        )[0]?.[0];
+        if (!source[selectedRegion] && topRegion) selectedRegion = topRegion;
+
+        bodyModelViewer.querySelectorAll(".hotspot-hit").forEach((el) => {
+          const v = source[el.dataset.region] || 0;
+          el.classList.toggle("active", el.dataset.region === selectedRegion);
+          el.classList.toggle(
+            "dim",
+            selectedRegion !== el.dataset.region && v < 0.35,
+          );
+          el.style.opacity = (0.36 + Math.min(v, 0.8) * 0.92).toFixed(3);
+          el.style.transform = `scale(${(1 + (el.dataset.region === selectedRegion ? 0.08 : v * 0.03)).toFixed(3)})`;
+        });
+
+        bodyModelViewer.querySelectorAll(".hotspot-glow").forEach((el) => {
+          const v = source[el.dataset.region] || 0;
+          const active = el.dataset.region === selectedRegion;
+          el.classList.toggle("active", active);
+          el.classList.toggle("dim", !active && v < 0.35);
+          const scale = 1 + v * 0.1 + (active ? 0.1 : 0);
+          el.style.transform = `scale(${scale.toFixed(3)})`;
+          el.style.opacity = active
+            ? (0.34 + v * 0.55).toFixed(3)
+            : (0.08 + v * 0.18).toFixed(3);
+        });
+
+        bodyModelViewer.querySelectorAll(".hotspot-ring").forEach((el) => {
+          const v = source[el.dataset.region] || 0;
+          const active = el.dataset.region === selectedRegion;
+          el.classList.toggle("active", active);
+          el.style.opacity = active
+            ? (0.2 + v * 0.18).toFixed(3)
+            : (0.03 + v * 0.04).toFixed(3);
+        });
+
+        const value = source[selectedRegion] || 0;
+        applyRegionCamera(selectedRegion);
+        regionTitle.textContent = REGION_NAMES[selectedRegion];
+
+        const ex = exercisesSource[selectedRegion] || [];
+        regionExercises.innerHTML = "";
+        ex.slice(0, 4).forEach((item) => {
+          const div = document.createElement("div");
+          div.className = "mini-item";
+          div.innerHTML = `<strong>${item.name}</strong><span>главный носитель этой области в выбранном режиме</span>`;
+          regionExercises.appendChild(div);
+        });
+
+        const dist = getBodyRegionDistribution(selectedRegion);
+        regionKpis.innerHTML = "";
+        [
+          ["A", "тяга"],
+          ["B", "опора"],
+          ["C", "верх"],
+        ].forEach(([key, label]) => {
+          const row = document.createElement("div");
+          row.className = "kpi-bar";
+          row.innerHTML = `
+      <div class="kpi-head"><span>${key} — ${label}</span><span>${Math.round((dist[key] || 0) * 100)}%</span></div>
+      <div class="kpi-track"><div class="kpi-fill" style="width:${Math.round((dist[key] || 0) * 100)}%"></div></div>
+    `;
+          regionKpis.appendChild(row);
+        });
+
+        if (bodyCaption) {
+          const captionBase = {
+            A: "режим A: тело собирается через тягу, спину и приближение к подтягиванию.",
+            B: "режим B: вперед выходит опора, таз и нижняя цепь тела.",
+            C: "режим C: верх уплотняется через плечи, руки и жимовую работу.",
+          };
+        }
+      }
+      bodyFilters.addEventListener("click", (e) => {
+        const btn = e.target.closest(".filter-pill");
+        if (!btn) return;
+        bodyMode = btn.dataset.mode;
+        updateBody();
+      });
+
+      const phaseList = document.getElementById("phaseList");
+      const pullStage = document.getElementById("pullStage");
+      const pullDetailDate = document.getElementById("pullDetailDate");
+      const pullDetailMetric = document.getElementById("pullDetailMetric");
+      const pullDetailTitle = document.getElementById("pullDetailTitle");
+      const pullDetailCopy = document.getElementById("pullDetailCopy");
+
+      function renderPhases() {
+        const stageHeight = Math.max(620, pullStage.clientHeight);
+        DATA.pullupPhases.forEach((phase, idx) => {
+          const card = document.createElement("button");
+          card.className = `phase-card${idx === 0 ? " active" : ""}`;
+          card.innerHTML = `<span class="phase-number">${phase.stage}</span><strong>${phase.title}</strong><span>${phase.date} · ${phase.metric}</span>`;
+          card.addEventListener("click", () => setPhase(idx));
+          phaseList.appendChild(card);
+
+          const top =
+            90 + idx * ((stageHeight - 180) / (DATA.pullupPhases.length - 1));
+
+          const marker = document.createElement("button");
+          marker.className = `pull-marker${idx === 0 ? " active" : ""}`;
+          marker.dataset.stage = phase.stage;
+          marker.style.top = `${top}px`;
+          marker.addEventListener("click", () => setPhase(idx));
+          pullStage.appendChild(marker);
+
+          const label = document.createElement("div");
+          label.className = "pull-label";
+          label.style.top = `${top}px`;
+          label.innerHTML = `<strong>${phase.title}</strong><span>${phase.metric}</span>`;
+          pullStage.appendChild(label);
+
+          phase._card = card;
+          phase._marker = marker;
+        });
+        setPhase(0);
+      }
+      function setPhase(idx) {
+        DATA.pullupPhases.forEach((phase, i) => {
+          phase._card.classList.toggle("active", i === idx);
+          phase._marker.classList.toggle("active", i === idx);
+        });
+        const ph = DATA.pullupPhases[idx];
+        pullDetailDate.textContent = ph.date;
+        pullDetailMetric.textContent = ph.metric;
+        pullDetailTitle.textContent = ph.title;
+        pullDetailCopy.textContent = ph.text;
+      }
+
+      const shiftsGrid = document.getElementById("shiftsGrid");
+      function renderShifts() {
+        DATA.shifts.forEach((item, idx) => {
+          const card = document.createElement("article");
+          card.className = "glass shift-card reveal";
+          card.style.setProperty("--accent", item.color);
+          const startPos = 18 + idx * 2;
+          const endPos = 78 - idx * 1.4;
+          card.innerHTML = `
+      <div class="shift-label">${item.label}</div>
+      <div class="shift-main">
+        <div class="shift-numbers">
+          <div><strong>${item.start}</strong></div>
+          <div class="shift-delta">${item.delta}</div>
+          <div><strong>${item.end}</strong></div>
+        </div>
+        <div class="shift-line">
+          <span class="shift-dot" style="left:${startPos}%"></span>
+          <span class="shift-dot" style="left:${endPos}%"></span>
+        </div>
+        <div class="shift-sub">${item.sub}</div>
+      </div>
+    `;
+          shiftsGrid.appendChild(card);
+          io.observe(card);
+        });
+      }
+
+      const archiveGrid = document.getElementById("archiveGrid");
+      let archiveFilter = "all";
+      function renderArchive() {
+        archiveGrid.innerHTML = "";
+        DATA.archive
+          .filter(
+            (item) => archiveFilter === "all" || item.block === archiveFilter,
+          )
+          .forEach((item) => {
+            const card = document.createElement("article");
+            card.className = "glass archive-card reveal";
+            const note = item.note
+              ? `<div class="footer-note">${item.note.replaceAll("\n", "<br>")}</div>`
+              : "";
+            const exercises = item.topExercises
+              .map(
+                (ex) =>
+                  `<div class="archive-exercise"><span>${ex.name}</span><em>${ex.weight ? ex.weight + " кг" : "вес тела / техника"} · ${ex.reps} повт.</em></div>`,
+              )
+              .join("");
+            const regions = item.regions
+              .map((r) => `<span>${r}</span>`)
+              .join("");
+            card.innerHTML = `
+        <div class="archive-top">
+          <div>
+            <div class="archive-date">${formatISODate(item.date)}</div>
+            <div class="archive-title">${item.title}</div>
+          </div>
+          <div class="archive-tag ${item.block}">${item.block}</div>
+        </div>
+        <div class="detail-copy">длительность: ${fmtMin(item.duration)} · плотность: ${Math.round(item.loadNorm * 100)}%</div>
+        <div class="archive-regions">${regions}</div>
+        <div class="archive-exercises">${exercises}</div>
+        ${note}
+      `;
+            archiveGrid.appendChild(card);
+            io.observe(card);
+          });
+      }
+      document
+        .getElementById("archiveFilters")
+        .addEventListener("click", (e) => {
+          const btn = e.target.closest(".filter-pill");
+          if (!btn) return;
+          archiveFilter = btn.dataset.filter;
+          document
+            .querySelectorAll("#archiveFilters .filter-pill")
+            .forEach((b) => b.classList.toggle("active", b === btn));
+          renderArchive();
+        });
+
+      (function atmosphere() {
+        const canvas = document.getElementById("atmosphere");
+        const ctx = canvas.getContext("2d");
+        let w = 0,
+          h = 0,
+          dpr = Math.min(window.devicePixelRatio || 1, 2);
+        let particles = [];
+        function resize() {
+          w = canvas.width = Math.floor(innerWidth * dpr);
+          h = canvas.height = Math.floor(innerHeight * dpr);
+          canvas.style.width = innerWidth + "px";
+          canvas.style.height = innerHeight + "px";
+          particles = Array.from(
+            { length: Math.min(110, Math.floor(innerWidth / 16)) },
+            () => ({
+              x: Math.random() * w,
+              y: Math.random() * h,
+              r: (1 + Math.random() * 2.2) * dpr,
+              vx: (-0.05 + Math.random() * 0.1) * dpr,
+              vy: (0.04 + Math.random() * 0.24) * dpr,
+              a: 0.08 + Math.random() * 0.34,
+              c: ["127,213,255", "255,159,207", "185,156,255"][
+                Math.floor(Math.random() * 3)
+              ],
+            }),
+          );
+        }
+        function tick() {
+          ctx.clearRect(0, 0, w, h);
+          for (const p of particles) {
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.y > h + 20) p.y = -20;
+            if (p.x < -20) p.x = w + 20;
+            if (p.x > w + 20) p.x = -20;
+            ctx.beginPath();
+            ctx.fillStyle = `rgba(${p.c},${p.a})`;
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          requestAnimationFrame(tick);
+        }
+        addEventListener("resize", resize);
+        resize();
+        tick();
+      })();
+
+      renderCalendar();
+      renderBlockMiniList();
+      applyModelSource();
+      updateBody();
+      renderPhases();
+      renderShifts();
+      renderArchive();
+    </script>
+  </body>
+</html>
+
+<script>
+  const EXTRA = {
+    shiftSeries: {
+      assist: {
+        label: "подтягивания: внешняя помощь",
+        metric: "внешняя помощь, кг",
+        data: [
+          { date: "2026-02-06", value: 35.0 },
+          { date: "2026-02-11", value: 35.0 },
+          { date: "2026-02-12", value: 35.0 },
+          { date: "2026-02-14", value: 35.0 },
+          { date: "2026-02-16", value: 28.0 },
+          { date: "2026-02-18", value: 28.0 },
+          { date: "2026-02-19", value: 28.0 },
+          { date: "2026-02-21", value: 28.0 },
+          { date: "2026-02-23", value: 35.0 },
+          { date: "2026-02-25", value: 21.0 },
+          { date: "2026-02-26", value: 28.0 },
+          { date: "2026-02-28", value: 28.0 },
+          { date: "2026-03-02", value: 28.0 },
+          { date: "2026-03-04", value: 25.0 },
+          { date: "2026-03-08", value: 28.0 },
+          { date: "2026-03-11", value: 21.0 },
+          { date: "2026-03-14", value: 25.0 },
+          { date: "2026-03-18", value: 14.0 },
+          { date: "2026-03-20", value: 25.0 },
+          { date: "2026-03-25", value: 14.0 },
+        ],
+      },
+      ohp: {
+        label: "seated overhead press",
+        metric: "рабочий вес, кг",
+        data: [
+          { date: "2026-02-04", value: 4.0 },
+          { date: "2026-02-12", value: 4.0 },
+          { date: "2026-02-18", value: 4.0 },
+          { date: "2026-02-23", value: 5.0 },
+          { date: "2026-02-28", value: 5.0 },
+          { date: "2026-03-05", value: 6.0 },
+          { date: "2026-03-12", value: 6.0 },
+          { date: "2026-03-18", value: 7.0 },
+          { date: "2026-03-26", value: 7.0 },
+        ],
+      },
+      chest: {
+        label: "chest press",
+        metric: "рабочий вес, кг",
+        data: [
+          { date: "2026-02-21", value: 15.0 },
+          { date: "2026-02-26", value: 20.0 },
+          { date: "2026-03-02", value: 17.5 },
+          { date: "2026-03-08", value: 20.0 },
+          { date: "2026-03-14", value: 25.0 },
+          { date: "2026-03-20", value: 25.0 },
+          { date: "2026-03-25", value: 25.0 },
+        ],
+      },
+      row: {
+        label: "seated row",
+        metric: "рабочий вес, кг",
+        data: [
+          { date: "2026-02-11", value: 20.0 },
+          { date: "2026-02-16", value: 15.0 },
+          { date: "2026-02-21", value: 20.0 },
+          { date: "2026-02-26", value: 20.0 },
+          { date: "2026-03-02", value: 20.0 },
+          { date: "2026-03-08", value: 20.0 },
+          { date: "2026-03-14", value: 25.0 },
+          { date: "2026-03-20", value: 25.0 },
+          { date: "2026-03-25", value: 30.0 },
+        ],
+      },
+      leg: {
+        label: "leg press",
+        metric: "рабочий вес, кг",
+        data: [
+          { date: "2026-02-06", value: 50.0 },
+          { date: "2026-02-19", value: 50.0 },
+          { date: "2026-02-25", value: 60.0 },
+          { date: "2026-03-04", value: 60.0 },
+          { date: "2026-03-11", value: 70.0 },
+          { date: "2026-03-21", value: 70.0 },
+        ],
+      },
+      hip: {
+        label: "hip thrust",
+        metric: "рабочий вес, кг",
+        data: [
+          { date: "2026-02-14", value: 10.0 },
+          { date: "2026-02-19", value: 15.0 },
+          { date: "2026-02-25", value: 15.0 },
+          { date: "2026-03-04", value: 15.0 },
+          { date: "2026-03-11", value: 20.0 },
+          { date: "2026-03-21", value: 20.0 },
+        ],
+      },
+    },
+  };
+  (function () {
+    const toggle = document.getElementById("calendarViewToggle");
+    if (toggle)
+      toggle.addEventListener("click", (e) => {
+        const btn = e.target.closest(".filter-pill");
+        if (!btn) return;
+        toggle
+          .querySelectorAll(".filter-pill")
+          .forEach((b) => b.classList.toggle("active", b === btn));
+        const view = btn.dataset.view;
+        document
+          .getElementById("calendarArtView")
+          .classList.toggle("active", view === "art");
+        document
+          .getElementById("calendarRealView")
+          .classList.toggle("active", view === "real");
+      });
+
+    function buildMonths() {
+      const host = document.getElementById("realCalendarMonths");
+      if (!host) return;
+      const days = DATA.calendar.map((d) => {
+        const dt = new Date(d.date + "T00:00:00");
+        return { ...d, dt };
+      });
+      const byMonth = {};
+      days.forEach((d) => {
+        const k =
+          d.dt.getFullYear() +
+          "-" +
+          String(d.dt.getMonth() + 1).padStart(2, "0");
+        (byMonth[k] ??= []).push(d);
+      });
+      const ru = {
+        0: "январь",
+        1: "февраль",
+        2: "март",
+        3: "апрель",
+        4: "май",
+        5: "июнь",
+        6: "июль",
+        7: "август",
+        8: "сентябрь",
+        9: "октябрь",
+        10: "ноябрь",
+        11: "декабрь",
+      };
+      const wd = ["пн", "вт", "ср", "чт", "пт", "сб", "вс"];
+      Object.values(byMonth).forEach((monthDays) => {
+        const first = monthDays[0].dt;
+        const y = first.getFullYear(),
+          m = first.getMonth();
+        const firstWeekday = (first.getDay() + 6) % 7;
+        const total = new Date(y, m + 1, 0).getDate();
+        const wrap = document.createElement("div");
+        wrap.className = "glass month-card";
+        wrap.innerHTML = `<div class="month-title">${ru[m]} ${y}</div><div class="week-head">${wd.map((x) => `<div>${x}</div>`).join("")}</div><div class="month-grid"></div>`;
+        const grid = wrap.querySelector(".month-grid");
+        for (let i = 0; i < firstWeekday; i++) {
+          const p = document.createElement("div");
+          grid.appendChild(p);
+        }
+        for (let day = 1; day <= total; day++) {
+          const iso = `${y}-${String(m + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+          const item = monthDays.find((d) => d.date === iso) || {
+            date: iso,
+            active: false,
+            block: null,
+            loadNorm: 0,
+            duration: 0,
+            name: "",
+          };
+          const cell = document.createElement("button");
+          cell.className = "real-day" + (item.active ? "" : " inactive");
+          if (item.block) cell.dataset.block = item.block;
+          const barCount = Math.max(1, Math.round((item.loadNorm || 0) * 5));
+          cell.innerHTML = `<div class="dnum">${day}</div><div class="dow">${wd[(firstWeekday + day - 1) % 7]}</div>${item.active ? '<div class="fill"></div><div class="ticks">' + Array.from({ length: barCount }, (_, i) => `<i style="height:${8 + i * 4}px"></i>`).join("") + "</div>" : ""}`;
+          cell.addEventListener("click", () =>
+            updateCalendarDetail(item, cell),
+          );
+          grid.appendChild(cell);
+        }
+        host.appendChild(wrap);
+      });
+      const firstActive = days.find((d) => d.active);
+      if (firstActive) updateCalendarDetail(firstActive);
+    }
+
+    function updateCalendarDetail(item, cell) {
+      document
+        .querySelectorAll(".real-day.selected")
+        .forEach((el) => el.classList.remove("selected"));
+      if (cell) cell.classList.add("selected");
+      const dateEl = document.getElementById("calendarDetailDate");
+      const titleEl = document.getElementById("calendarDetailTitle");
+      const copyEl = document.getElementById("calendarDetailCopy");
+      const listEl = document.getElementById("calendarDetailList");
+      if (!dateEl) return;
+      if (!item.active) {
+        dateEl.textContent = formatISODate(item.date);
+        titleEl.textContent = "пауза / восстановление";
+        copyEl.textContent =
+          "в этот день след активности не записан. внутри проекта такие паузы не пусты: они создают интервал, без которого сам ритм цикла не читается.";
+        listEl.innerHTML =
+          '<div class="detail-item"><span>состояние</span><strong>нет тренировки</strong></div>';
+        return;
+      }
+      dateEl.textContent = formatISODate(item.date);
+      titleEl.textContent = item.name;
+      const blockText =
+        { A: "тяга / спина", B: "низ тела / опора", C: "плечи / руки" }[
+          item.block
+        ] || "день цикла";
+      copyEl.textContent = `этот день принадлежит режиму ${item.block}. в календарном виде важно не содержимое подходов, а место этого входа в общей последовательности: ${blockText}, ${Math.round((item.loadNorm || 0) * 100)}% относительной плотности, ${fmtMin(item.duration)} во времени.`;
+      listEl.innerHTML = `<div class="detail-item"><span>режим</span><strong>${blockText}</strong></div><div class="detail-item"><span>длительность</span><strong>${fmtMin(item.duration)}</strong></div><div class="detail-item"><span>относительная плотность</span><strong>${Math.round((item.loadNorm || 0) * 100)}%</strong></div>`;
+    }
+    buildMonths();
+
+    const modeRow = document.getElementById("pullModeRow");
+    document.getElementById("pullPathStage").style.display = "none";
+    document.getElementById("pullArtifactStage").style.display = "";
+    if (modeRow)
+      modeRow.addEventListener("click", (e) => {
+        const btn = e.target.closest(".pull-mode-btn");
+        if (!btn) return;
+        modeRow
+          .querySelectorAll(".pull-mode-btn")
+          .forEach((b) => b.classList.toggle("active", b === btn));
+        const m = btn.dataset.mode;
+        document.getElementById("pullPathStage").style.display =
+          m === "path" ? "" : "none";
+        document.getElementById("pullArtifactStage").style.display =
+          m === "artifact" ? "" : "none";
+      });
+
+    function buildArtifact() {
+      const host = document.getElementById("pullConstellation");
+      const stage = document.getElementById("pullArtifactStage");
+      if (!host || !stage || !DATA.pullupPhases) return;
+
+      host.innerHTML = "";
+
+      const phaseCount = DATA.pullupPhases.length;
+      const stageHeight = Math.max(stage.clientHeight, 860);
+      const centerX = stage.clientWidth / 2 || 320;
+
+      const topPad = 120;
+      const bottomPad = 140;
+      const usable = stageHeight - topPad - bottomPad;
+
+      DATA.pullupPhases.forEach((p, i) => {
+        const t =
+          phaseCount === 1
+            ? topPad + usable / 2
+            : topPad + i * (usable / (phaseCount - 1));
+
+        const orbitSize = Math.max(220, 520 - i * 42);
+
+        const orbit = document.createElement("div");
+        orbit.className = "pull-orbit";
+        orbit.style.top = `${t - orbitSize / 2}px`;
+        orbit.style.left = `${centerX - orbitSize / 2}px`;
+        orbit.style.width = `${orbitSize}px`;
+        orbit.style.height = `${orbitSize}px`;
+        host.appendChild(orbit);
+
+        const rune = document.createElement("button");
+        rune.className = "pull-rune" + (i === 0 ? " active" : "");
+        rune.style.position = "absolute";
+        rune.style.left = "50%";
+        rune.style.top = `${t}px`;
+        rune.style.transform = "translate(-50%, -50%)";
+        rune.innerHTML = `<strong>${p.title}</strong><span>${p.metric} · ${p.date}</span>`;
+        rune.addEventListener("click", () => setPhase(i));
+        host.appendChild(rune);
+
+        p._rune = rune;
+      });
+    }
+    buildArtifact();
+    window.addEventListener("resize", () => {
+      const host = document.getElementById("pullConstellation");
+      if (host) buildArtifact();
+    });
+    const prevSetPhase = window.setPhase;
+    if (typeof prevSetPhase === "function") {
+      window.setPhase = function (idx) {
+        prevSetPhase(idx);
+        (DATA.pullupPhases || []).forEach(
+          (p, i) => p._rune && p._rune.classList.toggle("active", i === idx),
+        );
+      };
+    }
+
+    const shiftsMap = {
+      "внешняя помощь": "assist",
+      "жим над головой": "ohp",
+      "жим груди": "chest",
+      "горизонтальная тяга": "row",
+      "leg press": "leg",
+      "hip thrust": "hip",
+    };
+    setTimeout(() => {
+      document.querySelectorAll("#shiftsGrid .shift-card").forEach((card) => {
+        const label = card
+          .querySelector(".shift-label")
+          ?.textContent?.trim()
+          .toLowerCase();
+        let key = "";
+        for (const [k, v] of Object.entries(shiftsMap))
+          if (label && label.includes(k)) key = v;
+        if (!key) return;
+        const btn = document.createElement("button");
+        btn.className = "shift-chart-btn";
+        btn.textContent = "линейный график";
+        btn.addEventListener("click", () => openChart(key));
+        card.appendChild(btn);
+      });
+    }, 80);
+
+    const modal = document.getElementById("chartModal");
+    document
+      .getElementById("chartClose")
+      ?.addEventListener("click", () => modal.classList.remove("open"));
+    modal?.addEventListener("click", (e) => {
+      if (e.target === modal) modal.classList.remove("open");
+    });
+    function openChart(key) {
+      const conf = EXTRA.shiftSeries[key];
+      if (!conf) return;
+      modal.classList.add("open");
+      document.getElementById("chartEyebrow").textContent = conf.metric;
+      document.getElementById("chartTitle").textContent = conf.label;
+      document.getElementById("chartSub").textContent =
+        `по оси X — даты цикла, по оси Y — ${conf.metric}. показывается один показатель, чтобы увидеть именно форму изменения, а не весь лог сразу.`;
+      const svg = document.getElementById("shiftChartSvg");
+      const w = 900,
+        h = 360,
+        pad = { l: 60, r: 30, t: 18, b: 46 };
+      const vals = conf.data.map((d) => d.value);
+      const min = Math.min(...vals),
+        max = Math.max(...vals);
+      const x = (i) =>
+        pad.l +
+        (w - pad.l - pad.r) *
+          (conf.data.length === 1 ? 0.5 : i / (conf.data.length - 1));
+      const y = (v) =>
+        pad.t + (h - pad.t - pad.b) * (1 - (v - min) / (max - min || 1));
+      const pathLine = conf.data
+        .map(
+          (d, i) =>
+            `${i ? "L" : "M"}${x(i).toFixed(1)},${y(d.value).toFixed(1)}`,
+        )
+        .join(" ");
+      const points = conf.data
+        .map(
+          (d, i) =>
+            `<circle cx="${x(i)}" cy="${y(d.value)}" r="${i === conf.data.length - 1 ? 5 : 4}" fill="${i === conf.data.length - 1 ? "rgba(255,210,146,.96)" : "rgba(127,213,255,.95)"}" />`,
+        )
+        .join("");
+      const labels = conf.data
+        .map(
+          (d, i) =>
+            `<text x="${x(i)}" y="${h - 18}" text-anchor="middle" fill="rgba(205,216,240,.56)" font-size="11">${d.date.slice(5).replace("-", ".")}</text>`,
+        )
+        .join("");
+      const yTicks = [0, 0.5, 1]
+        .map((t) => {
+          const val = min + (max - min) * t;
+          const yy = y(val);
+          return `<line x1="${pad.l}" y1="${yy}" x2="${w - pad.r}" y2="${yy}" stroke="rgba(197,209,238,.08)" /><text x="18" y="${yy + 4}" fill="rgba(205,216,240,.56)" font-size="12">${val.toFixed(1).replace(".0", "")}</text>`;
+        })
+        .join("");
+      svg.innerHTML = `<rect x="0" y="0" width="${w}" height="${h}" fill="transparent"/>${yTicks}<path d="${pathLine}" fill="none" stroke="rgba(127,213,255,.95)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>${points}${labels}`;
+    }
+
+    if (window.p5) {
+      new p5((p) => {
+        const data = DATA.calendar;
+        let zoom = 1;
+        let panX = 0;
+        let panY = 0;
+        let hovered = null;
+        let tooltip = null;
+
+        function blockColor(block, alpha = 1) {
+          if (block === "A") return [127, 213, 255, alpha * 255];
+          if (block === "B") return [255, 159, 207, alpha * 255];
+          if (block === "C") return [185, 156, 255, alpha * 255];
+          return [125, 136, 168, alpha * 255];
+        }
+
+        function getNode(i, d) {
+          const cx = p.width / 2 + panX;
+          const cy = p.height / 2 + panY;
+          const baseR = Math.min(p.width, p.height) * 0.23 * zoom;
+          const ang = -p.HALF_PI + (p.TWO_PI * i) / data.length;
+          const load = d.loadNorm || 0;
+          const jitter = p.sin(p.frameCount * 0.01 + i * 0.45) * 12 * zoom;
+          const r =
+            baseR +
+            (d.active ? 38 + load * 96 : 10) * zoom +
+            (i % 2) * 16 * zoom +
+            jitter;
+          const x = cx + p.cos(ang) * r;
+          const y = cy + p.sin(ang) * r;
+          const size = d.active ? (8 + load * 26) * zoom : 3 * zoom;
+          return { x, y, size, r, ang };
+        }
+
+        function setLegend(block) {
+          const chips = [
+            ...document.querySelectorAll("#calendar .legend-chip"),
+          ];
+          chips.forEach((c) => c.classList.remove("active"));
+          if (block === "A" && chips[0]) chips[0].classList.add("active");
+          if (block === "B" && chips[1]) chips[1].classList.add("active");
+          if (block === "C" && chips[2]) chips[2].classList.add("active");
+        }
+
+        function updateTooltip() {
+          if (!tooltip) return;
+          if (!hovered || !hovered.d.active) {
+            tooltip.hidden = true;
+            setLegend(null);
+            return;
+          }
+
+          const d = hovered.d;
+          setLegend(d.block);
+
+          const blockText =
+            { A: "тяга / спина", B: "низ тела / опора", C: "плечи / руки" }[
+              d.block
+            ] || d.block;
+
+          tooltip.hidden = false;
+          tooltip.innerHTML = `
+        <div class="tt-date">${formatISODate(d.date)}</div>
+        <div class="tt-title">${d.name}</div>
+        <div class="tt-copy">
+          ${blockText} · ${Math.round((d.loadNorm || 0) * 100)}% плотности · ${fmtMin(d.duration)}
+        </div>
+      `;
+
+          const wrap = document.getElementById("calendarSketchWrap");
+          const tx = Math.min(
+            Math.max(hovered.node.x / p.pixelDensity() + 18, 12),
+            wrap.clientWidth - 250,
+          );
+          const ty = Math.min(
+            Math.max(hovered.node.y / p.pixelDensity() - 18, 12),
+            wrap.clientHeight - 120,
+          );
+          tooltip.style.left = `${tx}px`;
+          tooltip.style.top = `${ty}px`;
+        }
+
+        p.setup = () => {
+          const wrap = document.getElementById("calendarSketchWrap");
+          if (!wrap) return;
+          const c = p.createCanvas(wrap.clientWidth, 520);
+          c.parent("calendarSketchWrap");
+          p.noStroke();
+
+          tooltip = document.createElement("div");
+          tooltip.className = "calendar-tooltip";
+          tooltip.hidden = true;
+          wrap.appendChild(tooltip);
+        };
+
+        p.windowResized = () => {
+          const wrap = document.getElementById("calendarSketchWrap");
+          if (wrap) p.resizeCanvas(wrap.clientWidth, 520);
+        };
+
+        p.mouseWheel = (e) => {
+          const over =
+            p.mouseX >= 0 &&
+            p.mouseX <= p.width &&
+            p.mouseY >= 0 &&
+            p.mouseY <= p.height;
+
+          if (!over) return;
+
+          const next = zoom + (e.deltaY > 0 ? -0.08 : 0.08);
+          zoom = p.constrain(next, 0.82, 1.9);
+          return false;
+        };
+
+        p.mousePressed = () => {
+          const wrap = document.getElementById("calendarSketchWrap");
+          if (wrap) wrap.classList.add("dragging");
+        };
+
+        p.mouseReleased = () => {
+          const wrap = document.getElementById("calendarSketchWrap");
+          if (wrap) wrap.classList.remove("dragging");
+        };
+
+        p.mouseDragged = () => {
+          const over =
+            p.mouseX >= 0 &&
+            p.mouseX <= p.width &&
+            p.mouseY >= 0 &&
+            p.mouseY <= p.height;
+
+          if (!over) return;
+          panX += p.movedX;
+          panY += p.movedY;
+        };
+
+        p.mouseMoved = () => {
+          hovered = null;
+          let best = Infinity;
+
+          data.forEach((d, i) => {
+            const node = getNode(i, d);
+            const dist = p.dist(
+              p.mouseX,
+              p.mouseY,
+              node.x / p.pixelDensity(),
+              node.y / p.pixelDensity(),
+            );
+            const threshold = Math.max(14, node.size * 0.7);
+            if (dist < threshold && dist < best) {
+              best = dist;
+              hovered = { d, i, node };
+            }
+          });
+
+          updateTooltip();
+        };
+
+        p.mouseClicked = () => {
+          if (hovered?.d?.active) {
+            updateCalendarDetail(hovered.d);
+          }
+        };
+
+        p.draw = () => {
+          p.clear();
+          p.background(7, 10, 18, 150);
+
+          const cx = p.width / 2 + panX;
+          const cy = p.height / 2 + panY;
+          const baseR = Math.min(p.width, p.height) * 0.23 * zoom;
+
+          for (let ring = 0; ring < 4; ring++) {
+            p.noFill();
+            p.stroke(120, 150, 220, 18);
+            p.circle(cx, cy, baseR * 2 + ring * 80 * zoom);
+          }
+
+          data.forEach((d, i) => {
+            const node = getNode(i, d);
+            const col = blockColor(d.block, 1);
+            const isHovered = hovered && hovered.i === i;
+
+            if (d.active && i < data.length - 1) {
+              const next = data[i + 1];
+              const nextNode = getNode(i + 1, next);
+              p.stroke(col[0], col[1], col[2], next.active ? 34 : 10);
+              p.strokeWeight(next.active ? 1.4 : 0.6);
+              p.line(node.x, node.y, nextNode.x, nextNode.y);
+            }
+
+            p.noStroke();
+
+            if (d.active) {
+              const glowBoost = isHovered ? 1.35 : 1;
+              for (let k = 0; k < 4; k++) {
+                p.fill(col[0], col[1], col[2], (18 - k * 3) * glowBoost);
+                p.circle(node.x, node.y, node.size + (18 + k * 10) * glowBoost);
+              }
+              p.fill(255, 230);
+              p.circle(
+                node.x,
+                node.y,
+                Math.max(3, node.size * (isHovered ? 0.62 : 0.42)),
+              );
+            } else {
+              p.fill(115, 126, 148, 45);
+              p.circle(node.x, node.y, node.size);
+            }
+          });
+
+          p.noStroke();
+          p.fill(230, 238, 255, 22);
+          p.circle(cx, cy, baseR * 1.8);
+          p.fill(238, 244, 255, 210);
+          p.circle(cx, cy, 8);
+        };
+      });
+    }
+  })();
+</script>
